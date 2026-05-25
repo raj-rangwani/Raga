@@ -16,7 +16,7 @@ function ArtistCard({ artist }) {
 
   return (
     <Link
-      to="/artist-detail"
+      to={`/artist/${artist.id}`}
       className="group relative overflow-hidden rounded-3xl aspect-[3/4] block"
       style={{
         background: "#111",
