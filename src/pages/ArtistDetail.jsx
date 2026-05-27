@@ -1,6 +1,6 @@
 // src/pages/ArtistDetail.jsx
-// Dynamic — reads artist id from URL param /artist/:artistId
-// Images loaded from src/assets/artists/<id>.jpg (your local files)
+// Dynamic artist page — /artist/:artistId
+// Loads real songs from YouTube Data API with static fallback
 
 import { useParams, useNavigate } from "react-router-dom"
 import { useState } from "react"
@@ -8,93 +8,74 @@ import Navbar from "../components/Navbar"
 import AmbientEffects, { SongWave } from "../components/AmbientEffects"
 import { useMusicPlayer } from "../components/MusicPlayerContext"
 import { getArtistById } from "../data/artists"
-import { getSongsByArtist } from "../data/songs"
+import { useArtistTracks } from "../utils/useArtistTracks"
 import {
   Play, Pause, Clock, Heart, Shuffle,
-  ChevronLeft, Users, Music2, Award, Calendar
+  ChevronLeft, Users, Music2, Award,
+  Calendar, Loader2, Wifi, WifiOff
 } from "lucide-react"
 
-// ── Graceful image loader — tries local asset, falls back to placeholder ──
-function ArtistHeroImage({ artistId, name, color }) {
+// ── Artist hero placeholder (swap for real image) ─────────────
+function ArtistHero({ artist }) {
   return (
     <div className="absolute inset-0">
-      {/* 
-        IMPORTANT: replace the src below with your actual import or
-        a dynamic require when you have local images ready.
-        
-        Pattern to use once you add images:
-          import jagjitImg from "../assets/artists/jagjit-singh.jpg"
-          Then pass it as a prop from Artist.jsx
-        
-        For now we render a rich gradient placeholder that still looks premium.
-      */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background: `linear-gradient(135deg, ${color}18 0%, #0a0806 50%, #06080d 100%)`,
-        }}
-      />
-      {/* Decorative vinyl art as placeholder */}
-      <div
-        className="absolute"
-        style={{
-          right: "5%", top: "50%", transform: "translateY(-50%)",
-          width: "380px", height: "380px",
-          background: "conic-gradient(from 0deg, #1c1410 0deg, #2e2018 40deg, #120e0a 80deg, #221a12 120deg, #1c1410 160deg, #2e2018 200deg, #120e0a 240deg, #1c1410 280deg, #221a12 320deg, #1c1410 360deg)",
-          borderRadius: "50%",
-          boxShadow: `0 0 0 2px #3a2e1e, 0 0 80px ${color}20`,
-          opacity: 0.35,
-        }}
-      >
-        {/* Grooves */}
-        {[0.78, 0.62, 0.46, 0.32].map((r, i) => (
+      <div className="absolute inset-0" style={{
+        background: `linear-gradient(135deg, ${artist.color}15 0%, #0a0806 50%, #06080d 100%)`,
+      }} />
+      {/* Decorative vinyl */}
+      <div className="absolute" style={{
+        right: "6%", top: "50%", transform: "translateY(-50%)",
+        width: 340, height: 340, borderRadius: "50%", opacity: 0.3,
+        background: "conic-gradient(from 0deg, #1c1410 0deg, #2e2018 40deg, #120e0a 80deg, #221a12 120deg, #1c1410 160deg, #2e2018 200deg, #120e0a 240deg, #1c1410 280deg, #221a12 320deg, #1c1410 360deg)",
+        boxShadow: `0 0 0 2px #3a2e1e, 0 0 80px ${artist.color}25`,
+      }}>
+        {[0.76, 0.58, 0.42, 0.28].map((r, i) => (
           <div key={i} className="absolute rounded-full" style={{
             width: `${r * 100}%`, height: `${r * 100}%`,
             top: `${(1 - r) * 50}%`, left: `${(1 - r) * 50}%`,
-            border: `1px solid ${color}15`,
+            border: `1px solid ${artist.color}18`,
           }} />
         ))}
-        <div
-          className="absolute rounded-full"
-          style={{
-            width: "28%", height: "28%", top: "36%", left: "36%",
-            background: `radial-gradient(circle, ${color}, ${color}60)`,
-          }}
-        />
+        <div className="absolute rounded-full" style={{
+          width: "28%", height: "28%", top: "36%", left: "36%",
+          background: `radial-gradient(circle, ${artist.color}, ${artist.color}50)`,
+        }} />
       </div>
     </div>
   )
 }
 
 // ── Song row ──────────────────────────────────────────────────
-function SongRow({ song, index, color, onPlay, isCurrentSong, isPlaying, onLike, isLiked }) {
+function SongRow({ song, index, color, onPlay, isCurrent, isPlaying, onLike, isLiked }) {
   const [hovered, setHovered] = useState(false)
+  const hasVideo = !!song.videoId
 
   return (
     <div
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onDoubleClick={onPlay}
-      className="grid items-center px-4 py-3 rounded-xl transition-all duration-200 group cursor-pointer select-none"
+      onDoubleClick={hasVideo ? onPlay : undefined}
+      className="grid items-center px-4 py-3 rounded-xl transition-all duration-200 group select-none"
       style={{
-        gridTemplateColumns: "36px 1fr 80px 70px 60px",
-        gap: "0 16px",
-        background: isCurrentSong ? color + "0d" : hovered ? "rgba(255,255,255,0.04)" : "transparent",
-        border: isCurrentSong ? `1px solid ${color}18` : "1px solid transparent",
+        gridTemplateColumns: "36px 48px 1fr 70px 70px 55px",
+        gap: "0 12px",
+        background: isCurrent ? color + "0d" : hovered ? "rgba(255,255,255,0.04)" : "transparent",
+        border: isCurrent ? `1px solid ${color}18` : "1px solid transparent",
+        cursor: hasVideo ? "pointer" : "default",
       }}
     >
-      {/* Index / play */}
-      <div className="flex items-center justify-center h-full">
-        {hovered || isCurrentSong ? (
-          <button onClick={onPlay} className="transition-transform duration-150 hover:scale-110">
-            {isCurrentSong && isPlaying
-              ? <Pause size={15} style={{ color }} />
-              : <Play  size={15} style={{ color: isCurrentSong ? color : "rgba(255,255,255,0.75)", marginLeft: 1 }} />
+      {/* Index / Play */}
+      <div className="flex items-center justify-center">
+        {(hovered || isCurrent) && hasVideo ? (
+          <button onClick={onPlay}>
+            {isCurrent && isPlaying
+              ? <Pause size={14} style={{ color }} />
+              : <Play  size={14} style={{ color: isCurrent ? color : "rgba(255,255,255,0.75)", marginLeft: 1 }} />
             }
           </button>
         ) : (
           <span className="text-sm" style={{
-            color: isCurrentSong ? color : "rgba(255,255,255,0.2)",
+            color: isCurrent ? color : hasVideo ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.1)",
             fontFamily: "Inter",
           }}>
             {index + 1}
@@ -102,55 +83,71 @@ function SongRow({ song, index, color, onPlay, isCurrentSong, isPlaying, onLike,
         )}
       </div>
 
-      {/* Title + artist + wave */}
-      <div className="min-w-0 flex items-center gap-3">
-        <div className="min-w-0">
+      {/* Thumbnail */}
+      <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center"
+        style={{ background: color + "10", border: `1px solid ${color}15` }}
+      >
+        {song.thumbnail ? (
+          <img src={song.thumbnail} alt="" className="w-full h-full object-cover" />
+        ) : (
+          <Music2 size={14} style={{ color: color + "60" }} />
+        )}
+      </div>
+
+      {/* Title + meta */}
+      <div className="min-w-0">
+        <div className="flex items-center gap-2 min-w-0">
           <p className="text-sm truncate font-medium" style={{
-            color: isCurrentSong ? color : "rgba(255,255,255,0.85)",
+            color: isCurrent ? color : "rgba(255,255,255,0.85)",
             fontFamily: "Playfair Display",
           }}>
             {song.title}
           </p>
-          <div className="flex items-center gap-2 mt-0.5">
-            <p className="text-xs truncate" style={{ color: "rgba(255,255,255,0.28)", fontFamily: "Inter" }}>
-              {song.album} · {song.year}
-            </p>
-          </div>
+          {isCurrent && <SongWave playing={isPlaying} color={color} />}
+          {!hasVideo && (
+            <span className="text-[9px] px-1.5 py-0.5 rounded flex-shrink-0" style={{
+              background: "rgba(255,255,255,0.04)",
+              color: "rgba(255,255,255,0.2)",
+              fontFamily: "Inter",
+            }}>
+              No video
+            </span>
+          )}
         </div>
-        {isCurrentSong && (
-          <SongWave playing={isPlaying} color={color} />
-        )}
+        <p className="text-xs truncate mt-0.5" style={{ color: "rgba(255,255,255,0.25)", fontFamily: "Inter" }}>
+          {song.album !== "—" ? song.album : song.genre?.[0] || "Ghazal"} · {song.year}
+        </p>
       </div>
 
-      {/* Plays */}
+      {/* Views / Plays */}
       <p className="text-right text-xs" style={{ color: "rgba(255,255,255,0.22)", fontFamily: "Inter" }}>
-        {song.plays}
+        {song.plays || "—"}
       </p>
 
-      {/* Genre tag */}
+      {/* Genre */}
       <div className="flex justify-center">
-        <span className="text-[10px] px-2 py-0.5 rounded-full truncate" style={{
-          background: color + "12",
-          color: color + "aa",
-          border: `1px solid ${color}18`,
+        <span className="text-[10px] px-2 py-0.5 rounded-full truncate max-w-full" style={{
+          background: color + "10",
+          color: color + "99",
+          border: `1px solid ${color}15`,
           fontFamily: "Inter",
         }}>
           {song.genre?.[0] || "Ghazal"}
         </span>
       </div>
 
-      {/* Duration + like */}
+      {/* Like + duration */}
       <div className="flex items-center justify-end gap-2">
         <button
           onClick={e => { e.stopPropagation(); onLike(song.id) }}
-          className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+          className="opacity-0 group-hover:opacity-100 transition-opacity duration-150"
         >
-          <Heart size={13} style={{
+          <Heart size={12} style={{
             color: isLiked ? "#e05454" : "rgba(255,255,255,0.25)",
-            fill: isLiked ? "#e05454" : "none",
+            fill:  isLiked ? "#e05454" : "none",
           }} />
         </button>
-        <span className="text-xs" style={{ color: "rgba(255,255,255,0.25)", fontFamily: "Inter" }}>
+        <span className="text-xs" style={{ color: "rgba(255,255,255,0.22)", fontFamily: "Inter" }}>
           {song.duration}
         </span>
       </div>
@@ -158,24 +155,48 @@ function SongRow({ song, index, color, onPlay, isCurrentSong, isPlaying, onLike,
   )
 }
 
+// ── Loading skeleton row ───────────────────────────────────────
+function SkeletonRow() {
+  return (
+    <div className="grid items-center px-4 py-3 rounded-xl" style={{
+      gridTemplateColumns: "36px 48px 1fr 70px 70px 55px",
+      gap: "0 12px",
+    }}>
+      <div className="w-5 h-3 rounded animate-pulse mx-auto" style={{ background: "rgba(255,255,255,0.06)" }} />
+      <div className="w-10 h-10 rounded-lg animate-pulse" style={{ background: "rgba(255,255,255,0.06)" }} />
+      <div>
+        <div className="h-3 rounded w-48 animate-pulse mb-2" style={{ background: "rgba(255,255,255,0.07)" }} />
+        <div className="h-2 rounded w-28 animate-pulse" style={{ background: "rgba(255,255,255,0.04)" }} />
+      </div>
+      <div className="h-2 rounded w-10 ml-auto animate-pulse" style={{ background: "rgba(255,255,255,0.04)" }} />
+      <div className="h-5 rounded-full w-14 mx-auto animate-pulse" style={{ background: "rgba(255,255,255,0.04)" }} />
+      <div className="h-2 rounded w-8 ml-auto animate-pulse" style={{ background: "rgba(255,255,255,0.04)" }} />
+    </div>
+  )
+}
+
 // ── Main ──────────────────────────────────────────────────────
 export default function ArtistDetail() {
   const { artistId } = useParams()
-  const navigate = useNavigate()
-  const { playSong, currentSong, isPlaying, toggleLike, liked } = useMusicPlayer()
+  const navigate     = useNavigate()
+  const { playSong, currentSong, isPlaying } = useMusicPlayer()
 
   const artist = getArtistById(artistId)
-  const songs  = getSongsByArtist(artistId)
+  const { tracks, loading, error, source } = useArtistTracks(artistId, artist?.name)
 
-  // 404 — artist not found
+  const [activeTab,  setActiveTab]  = useState("tracks")
+  const [likedSongs, setLikedSongs] = useState(new Set())
+
   if (!artist) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center" style={{ background: "#080605" }}>
+      <div className="min-h-screen flex flex-col" style={{ background: "#080605" }}>
         <Navbar />
-        <div className="text-center mt-20">
+        <div className="flex-1 flex flex-col items-center justify-center text-center px-6">
           <p className="text-6xl mb-4" style={{ fontFamily: "Playfair Display", color: "#c4a882" }}>404</p>
-          <p className="text-zinc-500 mb-8" style={{ fontFamily: "Inter" }}>Artist not found</p>
-          <button onClick={() => navigate("/artists")} className="text-zinc-400 hover:text-white underline transition-colors" style={{ fontFamily: "Inter" }}>
+          <p className="text-zinc-500 mb-6" style={{ fontFamily: "Inter" }}>Artist not found</p>
+          <button onClick={() => navigate("/artists")}
+            className="text-sm text-zinc-500 hover:text-zinc-300 underline transition-colors"
+            style={{ fontFamily: "Inter" }}>
             ← Back to Artists
           </button>
         </div>
@@ -183,93 +204,102 @@ export default function ArtistDetail() {
     )
   }
 
-  const [activeTab, setActiveTab] = useState("tracks")
-  const [localLiked, setLocalLiked] = useState(new Set())
-
   const handlePlay = (song) => {
+    if (!song.videoId) return
     playSong(
-      { title: song.title, artist: artist.name, duration: song.duration },
-      songs.map(s => ({ title: s.title, artist: artist.name, duration: s.duration }))
+      {
+        title:       song.title,
+        artist:      artist.name,
+        videoId:     song.videoId,
+        thumbnail:   song.thumbnail,
+        duration:    song.duration,
+        durationSec: song.durationSec,
+      },
+      tracks
+        .filter(s => s.videoId)
+        .map(s => ({
+          title: s.title, artist: artist.name,
+          videoId: s.videoId, thumbnail: s.thumbnail,
+          duration: s.duration, durationSec: s.durationSec,
+        }))
     )
   }
 
-  const handlePlayAll = () => { if (songs.length > 0) handlePlay(songs[0]) }
+  const handlePlayAll = () => {
+    const first = tracks.find(s => s.videoId)
+    if (first) handlePlay(first)
+  }
 
-  const handleLike = (songId) => {
-    setLocalLiked(prev => {
+  const toggleLike = (id) => {
+    setLikedSongs(prev => {
       const next = new Set(prev)
-      next.has(songId) ? next.delete(songId) : next.add(songId)
+      next.has(id) ? next.delete(id) : next.add(id)
       return next
     })
   }
 
-  const isCurrentSong = (song) => currentSong?.title === song.title
+  const isCurrent = (song) => currentSong?.videoId === song.videoId && !!song.videoId
+
+  // Source badge
+  const sourceBadge = {
+    youtube:  { icon: Wifi,    label: "Live from YouTube", color: "#82b89a" },
+    enriched: { icon: Wifi,    label: "YouTube matched",   color: "#8ba9c4" },
+    static:   { icon: WifiOff, label: "Offline data",      color: "#888"    },
+  }[source]
 
   return (
     <div
       className="min-h-screen text-white pb-32 relative overflow-hidden"
       style={{ background: artist.accentBg || "#080605" }}
     >
-      <AmbientEffects glow glowColor={`${artist.color}08`} particles={false} />
-
+      <AmbientEffects glow glowColor={`${artist.color}07`} particles={false} />
       <Navbar />
 
       {/* ── Hero ──────────────────────────────────── */}
-      <div className="relative h-[58vh] min-h-[420px] overflow-hidden">
-        <ArtistHeroImage artistId={artist.id} name={artist.name} color={artist.color} />
-
-        {/* Gradient blends */}
+      <div className="relative h-[56vh] min-h-[400px] overflow-hidden">
+        <ArtistHero artist={artist} />
         <div className="absolute inset-0" style={{
-          background: "linear-gradient(to bottom, rgba(8,6,5,0.1) 0%, rgba(8,6,5,0.5) 55%, rgba(8,6,5,1) 100%)",
+          background: "linear-gradient(to bottom, rgba(8,6,5,0.1) 0%, rgba(8,6,5,0.55) 55%, rgba(8,6,5,1) 100%)",
         }} />
         <div className="absolute inset-0" style={{
           background: "linear-gradient(to right, rgba(8,6,5,0.85) 0%, transparent 55%)",
         }} />
 
-        {/* Back button */}
         <div className="absolute top-0 left-0 z-20 px-8 pt-6">
           <button
             onClick={() => navigate("/artists")}
-            className="flex items-center gap-2 transition-colors duration-200 group"
-            style={{ color: "rgba(255,255,255,0.4)", fontFamily: "Inter" }}
-            onMouseEnter={e => e.currentTarget.style.color = "rgba(255,255,255,0.8)"}
-            onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.4)"}
+            className="flex items-center gap-2 text-sm transition-colors duration-200 group"
+            style={{ color: "rgba(255,255,255,0.35)", fontFamily: "Inter" }}
+            onMouseEnter={e => e.currentTarget.style.color = "rgba(255,255,255,0.75)"}
+            onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.35)"}
           >
-            <ChevronLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />
-            <span className="text-sm">All Artists</span>
+            <ChevronLeft size={15} className="group-hover:-translate-x-0.5 transition-transform" />
+            All Artists
           </button>
         </div>
 
-        {/* Artist info */}
-        <div className="absolute bottom-0 left-0 px-8 md:px-10 pb-10 max-w-2xl z-10">
+        <div className="absolute bottom-0 left-0 px-8 md:px-10 pb-10 max-w-xl z-10">
           <p className="text-[10px] tracking-[0.35em] uppercase mb-2" style={{ color: artist.color, fontFamily: "Inter" }}>
             Artist · {artist.tags.join(", ")}
           </p>
-          <h1
-            className="text-5xl md:text-7xl text-amber-50 leading-tight mb-3"
-            style={{ fontFamily: "Playfair Display" }}
-          >
+          <h1 className="text-5xl md:text-7xl text-amber-50 leading-tight mb-2" style={{ fontFamily: "Playfair Display" }}>
             {artist.name}
           </h1>
-          <p className="text-zinc-500 text-sm mb-1" style={{ fontFamily: "serif" }}>{artist.urdu}</p>
-          <p className="text-zinc-400 text-sm leading-relaxed max-w-lg mt-3" style={{ fontFamily: "Inter" }}>
+          <p className="text-zinc-500 text-sm mb-3" style={{ fontFamily: "serif" }}>{artist.urdu}</p>
+          <p className="text-zinc-400 text-sm leading-relaxed max-w-md" style={{ fontFamily: "Inter" }}>
             {artist.bioShort}
           </p>
-
-          {/* Stats row */}
           <div className="flex items-center gap-6 mt-5 flex-wrap">
             {[
-              { icon: Users,    value: artist.followers,      label: "Followers"   },
-              { icon: Music2,   value: artist.totalSongs,     label: "Songs"       },
-              { icon: Calendar, value: artist.activeYears,    label: "Active"      },
+              { icon: Users,    value: artist.followers,   label: "Followers" },
+              { icon: Music2,   value: artist.totalSongs,  label: "Songs"     },
+              { icon: Calendar, value: artist.activeYears, label: "Active"    },
             ].map(s => (
               <div key={s.label} className="flex items-center gap-2">
-                <s.icon size={13} style={{ color: artist.color + "80" }} />
+                <s.icon size={12} style={{ color: artist.color + "70" }} />
                 <div>
-                  <p className="text-sm font-medium" style={{ color: artist.color, fontFamily: "Inter" }}>
-                    {s.value}
-                  </p>
-                  <p className="text-[10px] text-zinc-600" style={{ fontFamily: "Inter" }}>{s.label}</p>
+                  <p className="text-sm font-medium" style={{ color: artist.color, fontFamily: "Inter" }}>{s.value}</p>
+                  <p className="text-[10px] text-zinc-700" style={{ fontFamily: "Inter" }}>{s.label}</p>
                 </div>
               </div>
             ))}
@@ -277,21 +307,23 @@ export default function ArtistDetail() {
         </div>
       </div>
 
-      {/* ── Action bar ────────────────────────────── */}
-      <div className="px-8 md:px-10 py-6 flex items-center gap-3 flex-wrap">
+      {/* ── Actions ───────────────────────────────── */}
+      <div className="px-8 md:px-10 py-5 flex items-center gap-3 flex-wrap">
         <button
           onClick={handlePlayAll}
-          className="flex items-center gap-2.5 px-7 py-3 rounded-full font-medium text-sm transition-all duration-300 hover:scale-105 active:scale-95"
+          disabled={loading || !tracks.some(s => s.videoId)}
+          className="flex items-center gap-2.5 px-7 py-3 rounded-full font-medium text-sm transition-all duration-300 hover:scale-105 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
           style={{ background: artist.color, color: "#0a0804", fontFamily: "Inter" }}
         >
           <Play size={15} style={{ marginLeft: 1 }} />
-          Play All
+          {loading ? "Loading…" : "Play All"}
         </button>
+
         <button
-          className="flex items-center gap-2.5 px-6 py-3 rounded-full text-sm transition-all duration-200"
+          className="flex items-center gap-2.5 px-5 py-3 rounded-full text-sm transition-all duration-200"
           style={{
-            border: "1px solid rgba(255,255,255,0.1)",
-            color: "rgba(255,255,255,0.5)",
+            border: "1px solid rgba(255,255,255,0.09)",
+            color: "rgba(255,255,255,0.45)",
             fontFamily: "Inter",
           }}
           onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.05)"}
@@ -300,34 +332,35 @@ export default function ArtistDetail() {
           <Shuffle size={14} />
           Shuffle
         </button>
-        <button
-          className="flex items-center gap-2.5 px-6 py-3 rounded-full text-sm transition-all duration-200"
-          style={{
-            border: "1px solid rgba(255,255,255,0.1)",
-            color: "rgba(255,255,255,0.5)",
-            fontFamily: "Inter",
-          }}
-          onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.05)"}
-          onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-        >
-          <Heart size={14} />
-          Follow
-        </button>
+
+        {/* Source badge */}
+        {sourceBadge && (
+          <div className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full" style={{
+            background: "rgba(255,255,255,0.03)",
+            border: "1px solid rgba(255,255,255,0.06)",
+          }}>
+            <sourceBadge.icon size={11} style={{ color: sourceBadge.color }} />
+            <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.25)", fontFamily: "Inter" }}>
+              {sourceBadge.label}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* ── Tabs ──────────────────────────────────── */}
-      <div className="px-8 md:px-10 flex items-center gap-1 mb-6 border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+      <div className="px-8 md:px-10 flex items-center gap-1 mb-5 border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
         {["tracks", "albums", "about"].map(tab => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
+          <button key={tab} onClick={() => setActiveTab(tab)}
             className="relative px-4 py-3 text-sm capitalize transition-colors duration-200"
             style={{
-              color: activeTab === tab ? "#f5e6cc" : "rgba(255,255,255,0.3)",
+              color: activeTab === tab ? "#f5e6cc" : "rgba(255,255,255,0.28)",
               fontFamily: "Inter",
             }}
           >
             {tab}
+            {tab === "tracks" && tracks.length > 0 && (
+              <span className="ml-1 text-xs opacity-50">({tracks.length})</span>
+            )}
             {activeTab === tab && (
               <div className="absolute bottom-0 left-0 right-0 h-px" style={{ background: artist.color }} />
             )}
@@ -338,61 +371,68 @@ export default function ArtistDetail() {
       {/* ── Tracks tab ────────────────────────────── */}
       {activeTab === "tracks" && (
         <div className="px-6 md:px-8 max-w-4xl">
-          {songs.length === 0 ? (
-            <div className="text-center py-16">
-              <Music2 size={32} className="mx-auto mb-3 opacity-20" style={{ color: artist.color }} />
-              <p className="text-zinc-600 text-sm" style={{ fontFamily: "Inter" }}>
-                No songs found for this artist.
-              </p>
-              <p className="text-zinc-700 text-xs mt-1" style={{ fontFamily: "Inter" }}>
-                Add songs in src/data/songs.js with artistId: "{artist.id}"
-              </p>
+          {/* Error banner */}
+          {error && (
+            <div className="mb-4 px-4 py-3 rounded-xl text-sm flex items-center gap-2" style={{
+              background: "rgba(196,100,80,0.08)",
+              border: "1px solid rgba(196,100,80,0.15)",
+              color: "rgba(255,180,160,0.7)",
+              fontFamily: "Inter",
+            }}>
+              <WifiOff size={14} />
+              YouTube API error: {error}. Showing offline data.
             </div>
-          ) : (
-            <>
-              {/* Column headers */}
-              <div
-                className="grid px-4 mb-2"
-                style={{
-                  gridTemplateColumns: "36px 1fr 80px 70px 60px",
-                  gap: "0 16px",
-                  color: "rgba(255,255,255,0.18)",
-                  fontFamily: "Inter",
-                  fontSize: "10px",
-                  letterSpacing: "0.2em",
-                  textTransform: "uppercase",
-                }}
-              >
-                <span className="text-center">#</span>
-                <span>Title</span>
-                <span className="text-right">Plays</span>
-                <span className="text-center">Genre</span>
-                <span className="flex items-center justify-end"><Clock size={11} /></span>
-              </div>
+          )}
 
-              <div className="w-full mb-2" style={{ height: 1, background: "rgba(255,255,255,0.04)" }} />
+          {/* Column headers */}
+          <div className="grid px-4 mb-2" style={{
+            gridTemplateColumns: "36px 48px 1fr 70px 70px 55px",
+            gap: "0 12px",
+            color: "rgba(255,255,255,0.18)",
+            fontFamily: "Inter",
+            fontSize: "10px",
+            letterSpacing: "0.18em",
+            textTransform: "uppercase",
+          }}>
+            <span className="text-center">#</span>
+            <span />
+            <span>Title</span>
+            <span className="text-right">Views</span>
+            <span className="text-center">Genre</span>
+            <span className="flex items-center justify-end"><Clock size={11} /></span>
+          </div>
+          <div className="mb-2" style={{ height: 1, background: "rgba(255,255,255,0.04)" }} />
 
-              <div className="flex flex-col gap-0.5">
-                {songs.map((song, idx) => (
+          <div className="flex flex-col gap-0.5">
+            {loading && tracks.length === 0
+              ? Array(8).fill(0).map((_, i) => <SkeletonRow key={i} />)
+              : tracks.map((song, idx) => (
                   <SongRow
-                    key={song.id}
+                    key={song.id || song.videoId || idx}
                     song={song}
                     index={idx}
                     color={artist.color}
                     onPlay={() => handlePlay(song)}
-                    isCurrentSong={isCurrentSong(song)}
+                    isCurrent={isCurrent(song)}
                     isPlaying={isPlaying}
-                    onLike={handleLike}
-                    isLiked={localLiked.has(song.id)}
+                    onLike={toggleLike}
+                    isLiked={likedSongs.has(song.id)}
                   />
-                ))}
-              </div>
+                ))
+            }
 
-              <p className="mt-6 px-4 text-xs" style={{ color: "rgba(255,255,255,0.12)", fontFamily: "Inter" }}>
-                {songs.length} tracks · Double-click to play · Hover to reveal controls
-              </p>
-            </>
-          )}
+            {/* Live loading indicator while enriching */}
+            {loading && tracks.length > 0 && (
+              <div className="flex items-center gap-2 px-4 py-3" style={{ color: "rgba(255,255,255,0.2)", fontFamily: "Inter" }}>
+                <Loader2 size={13} className="animate-spin" />
+                <span className="text-xs">Finding videos on YouTube…</span>
+              </div>
+            )}
+          </div>
+
+          <p className="mt-5 px-4 text-xs" style={{ color: "rgba(255,255,255,0.1)", fontFamily: "Inter" }}>
+            {tracks.length} tracks · Double-click to play
+          </p>
         </div>
       )}
 
@@ -403,38 +443,32 @@ export default function ArtistDetail() {
             {artist.albums.map((album, i) => (
               <div key={i} className="group cursor-pointer">
                 <div
-                  className="aspect-square rounded-2xl mb-3 flex items-center justify-center relative overflow-hidden transition-all duration-300 group-hover:scale-[1.02]"
+                  className="aspect-square rounded-2xl mb-3 flex items-center justify-center overflow-hidden transition-all duration-300 group-hover:scale-[1.02]"
                   style={{
                     background: `linear-gradient(135deg, ${artist.color}20 0%, ${artist.color}06 100%)`,
-                    border: `1px solid ${artist.color}15`,
-                    boxShadow: `0 8px 30px rgba(0,0,0,0.3)`,
+                    border: `1px solid ${artist.color}12`,
+                    boxShadow: "0 8px 30px rgba(0,0,0,0.3)",
                   }}
                 >
-                  {/* Vinyl inside album art */}
-                  <div
-                    className="w-16 h-16 rounded-full"
+                  <div className="w-16 h-16 rounded-full flex items-center justify-center"
                     style={{
                       background: "conic-gradient(from 0deg, #1a1a1a, #2a2a2a 90deg, #111 180deg, #222 270deg)",
-                      border: "2px solid #333",
+                      border: "2px solid #2a2a2a",
                     }}
                   >
-                    <div className="w-full h-full rounded-full flex items-center justify-center">
-                      <div className="w-3 h-3 rounded-full" style={{ background: artist.color + "80" }} />
-                    </div>
+                    <div className="w-4 h-4 rounded-full" style={{ background: artist.color + "70" }} />
                   </div>
-                  <div
-                    className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                    style={{ background: "rgba(0,0,0,0.45)" }}
-                  >
-                    <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ background: artist.color }}>
-                      <Play size={17} color="#0a0804" style={{ marginLeft: 2 }} />
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-2xl"
+                    style={{ background: "rgba(0,0,0,0.45)" }}>
+                    <div className="w-11 h-11 rounded-full flex items-center justify-center" style={{ background: artist.color }}>
+                      <Play size={16} color="#0a0804" style={{ marginLeft: 2 }} />
                     </div>
                   </div>
                 </div>
-                <p className="text-sm font-medium" style={{ color: "rgba(255,255,255,0.8)", fontFamily: "Playfair Display" }}>
+                <p className="text-sm font-medium" style={{ color: "rgba(255,255,255,0.78)", fontFamily: "Playfair Display" }}>
                   {album.title}
                 </p>
-                <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.28)", fontFamily: "Inter" }}>
+                <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.25)", fontFamily: "Inter" }}>
                   {album.year} · {album.tracks} tracks
                 </p>
               </div>
@@ -446,71 +480,54 @@ export default function ArtistDetail() {
       {/* ── About tab ─────────────────────────────── */}
       {activeTab === "about" && (
         <div className="px-8 md:px-10 max-w-3xl grid grid-cols-1 md:grid-cols-2 gap-10">
-          {/* Bio */}
           <div>
             <h3 className="text-lg text-amber-100 mb-4" style={{ fontFamily: "Playfair Display" }}>Biography</h3>
-            <p className="text-zinc-400 text-sm leading-loose" style={{ fontFamily: "Inter" }}>
-              {artist.bio}
-            </p>
+            <p className="text-zinc-400 text-sm leading-loose" style={{ fontFamily: "Inter" }}>{artist.bio}</p>
           </div>
-
-          {/* Metadata */}
           <div className="space-y-6">
-            {/* Born / Died */}
             <div>
-              <h3 className="text-xs tracking-widest uppercase mb-3" style={{ color: "rgba(255,255,255,0.2)", fontFamily: "Inter" }}>
+              <h3 className="text-[10px] tracking-widest uppercase mb-3" style={{ color: "rgba(255,255,255,0.18)", fontFamily: "Inter" }}>
                 Details
               </h3>
               <div className="space-y-2.5">
                 {[
-                  { label: "Born",         value: artist.born },
-                  { label: "Origin",       value: artist.origin },
-                  { label: "Active",       value: artist.activeYears },
-                  { label: "Genres",       value: artist.tags.join(", ") },
+                  { label: "Born",   value: artist.born },
+                  { label: "Origin", value: artist.origin },
+                  { label: "Active", value: artist.activeYears },
+                  { label: "Genres", value: artist.tags.join(", ") },
                   ...(artist.died ? [{ label: "Died", value: artist.died }] : []),
                 ].map(d => (
                   <div key={d.label} className="flex gap-3">
-                    <span className="text-xs text-zinc-600 w-16 flex-shrink-0 pt-0.5" style={{ fontFamily: "Inter" }}>
-                      {d.label}
-                    </span>
-                    <span className="text-xs text-zinc-400 flex-1" style={{ fontFamily: "Inter" }}>
-                      {d.value}
-                    </span>
+                    <span className="text-xs text-zinc-600 w-14 flex-shrink-0" style={{ fontFamily: "Inter" }}>{d.label}</span>
+                    <span className="text-xs text-zinc-400" style={{ fontFamily: "Inter" }}>{d.value}</span>
                   </div>
                 ))}
               </div>
             </div>
-
-            {/* Awards */}
             {artist.awards?.length > 0 && (
               <div>
-                <h3 className="text-xs tracking-widest uppercase mb-3 flex items-center gap-2" style={{ color: "rgba(255,255,255,0.2)", fontFamily: "Inter" }}>
-                  <Award size={11} />
-                  Awards
+                <h3 className="text-[10px] tracking-widest uppercase mb-3 flex items-center gap-1.5" style={{ color: "rgba(255,255,255,0.18)", fontFamily: "Inter" }}>
+                  <Award size={10} /> Awards
                 </h3>
-                <div className="flex flex-col gap-2">
-                  {artist.awards.map((a, i) => (
-                    <div key={i} className="flex items-start gap-2">
-                      <div className="w-1 h-1 rounded-full mt-1.5 flex-shrink-0" style={{ background: artist.color + "60" }} />
-                      <p className="text-xs text-zinc-500" style={{ fontFamily: "Inter" }}>{a}</p>
-                    </div>
-                  ))}
-                </div>
+                {artist.awards.map((a, i) => (
+                  <div key={i} className="flex items-start gap-2 mb-2">
+                    <div className="w-1 h-1 rounded-full mt-1.5 flex-shrink-0" style={{ background: artist.color + "50" }} />
+                    <p className="text-xs text-zinc-500" style={{ fontFamily: "Inter" }}>{a}</p>
+                  </div>
+                ))}
               </div>
             )}
-
-            {/* Influences */}
             {artist.influences?.length > 0 && (
               <div>
-                <h3 className="text-xs tracking-widest uppercase mb-3" style={{ color: "rgba(255,255,255,0.2)", fontFamily: "Inter" }}>
+                <h3 className="text-[10px] tracking-widest uppercase mb-3" style={{ color: "rgba(255,255,255,0.18)", fontFamily: "Inter" }}>
                   Influences
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {artist.influences.map((inf, i) => (
                     <span key={i} className="text-xs px-3 py-1 rounded-full" style={{
-                      background: artist.color + "10",
-                      color: artist.color + "99",
-                      border: `1px solid ${artist.color}18`,
+                      background: artist.color + "0e",
+                      color: artist.color + "88",
+                      border: `1px solid ${artist.color}15`,
                       fontFamily: "Inter",
                     }}>
                       {inf}
