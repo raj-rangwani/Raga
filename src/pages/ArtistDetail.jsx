@@ -1,7 +1,4 @@
 // src/pages/ArtistDetail.jsx
-// Dynamic artist page — /artist/:artistId
-// Loads real songs from YouTube Data API with static fallback
-
 import { useParams, useNavigate } from "react-router-dom"
 import { useState } from "react"
 import Navbar from "../components/Navbar"
@@ -15,32 +12,48 @@ import {
   Calendar, Loader2, Wifi, WifiOff
 } from "lucide-react"
 
-// ── Artist hero placeholder (swap for real image) ─────────────
+// ── Artist hero — real photo as background ────────────────────
 function ArtistHero({ artist }) {
   return (
     <div className="absolute inset-0">
-      <div className="absolute inset-0" style={{
-        background: `linear-gradient(135deg, ${artist.color}15 0%, #0a0806 50%, #06080d 100%)`,
-      }} />
-      {/* Decorative vinyl */}
-      <div className="absolute" style={{
-        right: "6%", top: "50%", transform: "translateY(-50%)",
-        width: 340, height: 340, borderRadius: "50%", opacity: 0.3,
-        background: "conic-gradient(from 0deg, #1c1410 0deg, #2e2018 40deg, #120e0a 80deg, #221a12 120deg, #1c1410 160deg, #2e2018 200deg, #120e0a 240deg, #1c1410 280deg, #221a12 320deg, #1c1410 360deg)",
-        boxShadow: `0 0 0 2px #3a2e1e, 0 0 80px ${artist.color}25`,
-      }}>
-        {[0.76, 0.58, 0.42, 0.28].map((r, i) => (
-          <div key={i} className="absolute rounded-full" style={{
-            width: `${r * 100}%`, height: `${r * 100}%`,
-            top: `${(1 - r) * 50}%`, left: `${(1 - r) * 50}%`,
-            border: `1px solid ${artist.color}18`,
-          }} />
-        ))}
-        <div className="absolute rounded-full" style={{
-          width: "28%", height: "28%", top: "36%", left: "36%",
-          background: `radial-gradient(circle, ${artist.color}, ${artist.color}50)`,
+      {/* Real artist photo */}
+      {artist.image && (
+        <img
+          src={artist.image}
+          alt={artist.name}
+          className="absolute inset-0 w-full h-full object-cover object-top"
+          style={{ filter: "brightness(0.45) saturate(0.8)" }}
+        />
+      )}
+
+      {/* Fallback gradient if no image */}
+      {!artist.image && (
+        <div className="absolute inset-0" style={{
+          background: `linear-gradient(135deg, ${artist.color}15 0%, #0a0806 50%, #06080d 100%)`,
         }} />
-      </div>
+      )}
+
+      {/* Dark gradient overlays so text stays readable */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background: "linear-gradient(to right, rgba(8,6,5,0.92) 0%, rgba(8,6,5,0.5) 50%, rgba(8,6,5,0.2) 100%)",
+        }}
+      />
+      <div
+        className="absolute inset-0"
+        style={{
+          background: "linear-gradient(to bottom, rgba(8,6,5,0.1) 0%, rgba(8,6,5,0.4) 55%, rgba(8,6,5,1) 100%)",
+        }}
+      />
+
+      {/* Subtle color tint from artist accent */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background: `radial-gradient(ellipse at 70% 50%, ${artist.color}12 0%, transparent 60%)`,
+        }}
+      />
     </div>
   )
 }
@@ -214,6 +227,7 @@ export default function ArtistDetail() {
         thumbnail:   song.thumbnail,
         duration:    song.duration,
         durationSec: song.durationSec,
+        lyrics:      song.lyrics || [],   // ← pass lyrics through
       },
       tracks
         .filter(s => s.videoId)
@@ -221,6 +235,7 @@ export default function ArtistDetail() {
           title: s.title, artist: artist.name,
           videoId: s.videoId, thumbnail: s.thumbnail,
           duration: s.duration, durationSec: s.durationSec,
+          lyrics: s.lyrics || [],         // ← also in queue
         }))
     )
   }
@@ -240,7 +255,6 @@ export default function ArtistDetail() {
 
   const isCurrent = (song) => currentSong?.videoId === song.videoId && !!song.videoId
 
-  // Source badge
   const sourceBadge = {
     youtube:  { icon: Wifi,    label: "Live from YouTube", color: "#82b89a" },
     enriched: { icon: Wifi,    label: "YouTube matched",   color: "#8ba9c4" },
@@ -256,15 +270,10 @@ export default function ArtistDetail() {
       <Navbar />
 
       {/* ── Hero ──────────────────────────────────── */}
-      <div className="relative h-[56vh] min-h-[400px] overflow-hidden">
+      <div className="relative h-[60vh] min-h-[440px] overflow-hidden">
         <ArtistHero artist={artist} />
-        <div className="absolute inset-0" style={{
-          background: "linear-gradient(to bottom, rgba(8,6,5,0.1) 0%, rgba(8,6,5,0.55) 55%, rgba(8,6,5,1) 100%)",
-        }} />
-        <div className="absolute inset-0" style={{
-          background: "linear-gradient(to right, rgba(8,6,5,0.85) 0%, transparent 55%)",
-        }} />
 
+        {/* Back button */}
         <div className="absolute top-0 left-0 z-20 px-8 pt-6">
           <button
             onClick={() => navigate("/artists")}
@@ -278,7 +287,8 @@ export default function ArtistDetail() {
           </button>
         </div>
 
-        <div className="absolute bottom-0 left-0 px-8 md:px-10 pb-10 max-w-xl z-10">
+        {/* Artist info — bottom left */}
+        <div className="absolute bottom-0 left-0 px-8 md:px-10 pb-10 max-w-2xl z-10">
           <p className="text-[10px] tracking-[0.35em] uppercase mb-2" style={{ color: artist.color, fontFamily: "Inter" }}>
             Artist · {artist.tags.join(", ")}
           </p>
@@ -333,7 +343,6 @@ export default function ArtistDetail() {
           Shuffle
         </button>
 
-        {/* Source badge */}
         {sourceBadge && (
           <div className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full" style={{
             background: "rgba(255,255,255,0.03)",
@@ -371,7 +380,6 @@ export default function ArtistDetail() {
       {/* ── Tracks tab ────────────────────────────── */}
       {activeTab === "tracks" && (
         <div className="px-6 md:px-8 max-w-4xl">
-          {/* Error banner */}
           {error && (
             <div className="mb-4 px-4 py-3 rounded-xl text-sm flex items-center gap-2" style={{
               background: "rgba(196,100,80,0.08)",
@@ -384,7 +392,6 @@ export default function ArtistDetail() {
             </div>
           )}
 
-          {/* Column headers */}
           <div className="grid px-4 mb-2" style={{
             gridTemplateColumns: "36px 48px 1fr 70px 70px 55px",
             gap: "0 12px",
@@ -420,8 +427,6 @@ export default function ArtistDetail() {
                   />
                 ))
             }
-
-            {/* Live loading indicator while enriching */}
             {loading && tracks.length > 0 && (
               <div className="flex items-center gap-2 px-4 py-3" style={{ color: "rgba(255,255,255,0.2)", fontFamily: "Inter" }}>
                 <Loader2 size={13} className="animate-spin" />
@@ -443,7 +448,7 @@ export default function ArtistDetail() {
             {artist.albums.map((album, i) => (
               <div key={i} className="group cursor-pointer">
                 <div
-                  className="aspect-square rounded-2xl mb-3 flex items-center justify-center overflow-hidden transition-all duration-300 group-hover:scale-[1.02]"
+                  className="aspect-square rounded-2xl mb-3 flex items-center justify-center overflow-hidden relative transition-all duration-300 group-hover:scale-[1.02]"
                   style={{
                     background: `linear-gradient(135deg, ${artist.color}20 0%, ${artist.color}06 100%)`,
                     border: `1px solid ${artist.color}12`,

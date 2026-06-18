@@ -519,3 +519,105 @@ export const SONGS = [
 export const getSongById       = (id)       => SONGS.find(s => s.id === id)
 export const getSongsByArtist  = (artistId) => SONGS.filter(s => s.artistId === artistId)
 export const getSongByTitle    = (title)    => SONGS.find(s => s.title.toLowerCase() === title.toLowerCase())
+
+// ── ADDITIONAL SONGS (appended to existing SONGS array) ───────
+// Import this file and spread into your existing SONGS array,
+// OR just copy-paste these entries into the SONGS array in songs.js
+
+export const EXTRA_SONGS = [
+
+  // ── MORE JAGJIT SINGH ─────────────────────────────────────────
+  { id: "woh-kagaz-ki-kashti", title: "Woh Kagaz Ki Kashti", artistId: "jagjit-singh", artist: "Jagjit Singh", duration: "5:30", durationSec: 330, year: "1990", plays: "3.8M", album: "Sajda", genre: ["Ghazal"], mood: ["Nostalgic"], tags: ["jagjit", "sajda", "childhood"],
+    lyrics: [{ time: 0, line: "वो काग़ज़ की कश्ती" }, { time: 6, line: "वो बारिश का पानी" }, { time: 12, line: "Woh kagaz ki kashti" }, { time: 18, line: "woh barish ka paani" }] },
+  { id: "in-aankhon-ki-masti", title: "In Aankhon Ki Masti", artistId: "jagjit-singh", artist: "Jagjit Singh", duration: "4:44", durationSec: 284, year: "1982", plays: "2.9M", album: "Saath Saath", genre: ["Ghazal"], mood: ["Romantic"], tags: ["jagjit", "saath-saath"],
+    lyrics: [{ time: 0, line: "इन आँखों की मस्ती के" }, { time: 7, line: "मस्ताने हज़ारों हैं" }, { time: 14, line: "In aankhon ki masti ke" }, { time: 21, line: "mastaane hazaaron hain" }] },
+  { id: "tum-ko-dekha", title: "Tum Ko Dekha To Yeh Khayaal Aaya", artistId: "jagjit-singh", artist: "Jagjit Singh", duration: "5:02", durationSec: 302, year: "1982", plays: "2.1M", album: "Arth", genre: ["Ghazal"], mood: ["Romantic"], tags: ["jagjit", "arth"],
+    lyrics: [{ time: 0, line: "तुम को देखा तो यह ख़याल आया" }, { time: 7, line: "ज़िंदगी धूप, तुम घना साया" }, { time: 14, line: "Tum ko dekha to yeh khayaal aaya" }, { time: 21, line: "zindagi dhoop, tum ghana saaya" }] },
+  { id: "main-nahin-maangta", title: "Main Nahin Maangta Duniya Se Kuch Bhi", artistId: "jagjit-singh", artist: "Jagjit Singh", duration: "6:10", durationSec: 370, year: "1994", plays: "1.1M", album: "Marasim", genre: ["Ghazal"], mood: ["Devotional"], tags: ["jagjit", "marasim"],
+    lyrics: [{ time: 0, line: "मैं नहीं माँगता दुनिया से कुछ भी" }, { time: 8, line: "मुझको तो बस तेरा सहारा चाहिए" }] },
+
+  // ── MORE MEHDI HASSAN ─────────────────────────────────────────
+  { id: "patta-patta", title: "Patta Patta Boota Boota", artistId: "mehdi-hassan", artist: "Mehdi Hassan", duration: "8:20", durationSec: 500, year: "1977", plays: "2.4M", album: "Ghazal", genre: ["Ghazal"], mood: ["Devotional", "Soulful"], tags: ["mehdi", "mir-taqi-mir"],
+    lyrics: [{ time: 0, line: "پتا پتا بوٹا بوٹا حال ہمارا جانے ہے" }, { time: 9, line: "Patta patta boota boota haal hamara jaane hai" }, { time: 18, line: "جانے نہ جانے گل ہی نہ جانے" }, { time: 27, line: "baagh to saara jaane hai" }] },
+  { id: "ab-ke-hum-bichde", title: "Ab Ke Hum Bichde", artistId: "mehdi-hassan", artist: "Mehdi Hassan", duration: "7:45", durationSec: 465, year: "1979", plays: "3.5M", album: "Live in London", genre: ["Ghazal"], mood: ["Heartbreak", "Longing"], tags: ["mehdi", "ahmad-faraz"],
+    lyrics: [{ time: 0, line: "اب کے ہم بچھڑے تو شاید کبھی خوابوں میں ملیں" }, { time: 9, line: "Ab ke hum bichde to shayad kabhi khwabon mein milein" }, { time: 18, line: "جیسے سوکھے ہوئے پھول" }, { time: 27, line: "kitabon mein milein" }] },
+  { id: "mujhe-tum-nazar", title: "Mujhe Tum Nazar Se Gira To Rahe Ho", artistId: "mehdi-hassan", artist: "Mehdi Hassan", duration: "6:30", durationSec: 390, year: "1975", plays: "1.8M", album: "Sarhadein", genre: ["Ghazal"], mood: ["Melancholic"], tags: ["mehdi", "sarhadein"],
+    lyrics: [{ time: 0, line: "مجھے تم نظر سے گرا تو رہے ہو" }, { time: 8, line: "Mujhe tum nazar se gira to rahe ho" }, { time: 16, line: "محبت تو نہیں کرتے مگر" }, { time: 24, line: "nazar se juda to karte nahi" }] },
+  { id: "ghalat-fehmi", title: "Ghalat Fehmi Na Ho", artistId: "mehdi-hassan", artist: "Mehdi Hassan", duration: "5:55", durationSec: 355, year: "1974", plays: "1.3M", album: "Ranjish Hi Sahi", genre: ["Ghazal"], mood: ["Philosophical"], tags: ["mehdi"],
+    lyrics: [{ time: 0, line: "غلط فہمی نہ ہو" }, { time: 6, line: "Ghalat fehmi na ho" }, { time: 12, line: "یہ ہجر کا موسم" }, { time: 18, line: "yeh hijr ka mausam" }] },
+
+  // ── MORE NUSRAT ───────────────────────────────────────────────
+  { id: "tumhe-dillagi", title: "Tumhe Dillagi Bhool Jaani Padegi", artistId: "nusrat-fateh-ali-khan", artist: "Nusrat Fateh Ali Khan", duration: "7:30", durationSec: 450, year: "1994", plays: "4.1M", album: "The Last Prophet", genre: ["Qawwali"], mood: ["Devotional"], tags: ["nusrat", "devotional"],
+    lyrics: [{ time: 0, line: "تمہیں دلگی بھول جانی پڑے گی" }, { time: 8, line: "Tumhe dillagi bhool jaani padegi" }, { time: 16, line: "محبت کی راہ میں" }, { time: 24, line: "mohabbat ki raah mein" }] },
+  { id: "sanson-ki-mala", title: "Sanson Ki Mala Pe Simron Main", artistId: "nusrat-fateh-ali-khan", artist: "Nusrat Fateh Ali Khan", duration: "8:10", durationSec: 490, year: "1997", plays: "5.9M", album: "Chain of Gold", genre: ["Qawwali", "Sufi"], mood: ["Devotional", "Trance"], tags: ["nusrat", "sufi", "devotional"],
+    lyrics: [{ time: 0, line: "سانسوں کی مالا پے سمروں میں" }, { time: 8, line: "Sanson ki mala pe simron main" }, { time: 16, line: "پی کا نام" }, { time: 22, line: "pi ka naam" }] },
+  { id: "kinna-sohna", title: "Kinna Sohna Tenu Rab Ne Banaya", artistId: "nusrat-fateh-ali-khan", artist: "Nusrat Fateh Ali Khan", duration: "6:45", durationSec: 405, year: "1992", plays: "6.3M", album: "Night Song", genre: ["Folk", "Sufi"], mood: ["Joyful", "Romantic"], tags: ["nusrat", "punjabi", "folk"],
+    lyrics: [{ time: 0, line: "کنا سوہنا تینوں ربّ نے بنایا" }, { time: 8, line: "Kinna sohna tenu Rab ne banaya" }, { time: 16, line: "میرے دل نوں تیری لوڑ اے" }, { time: 24, line: "mere dil nu teri lor ae" }] },
+
+  // ── MORE ABIDA PARVEEN ────────────────────────────────────────
+  { id: "main-sufi-hoon", title: "Main Sufi Hoon", artistId: "abida-parveen", artist: "Abida Parveen", duration: "9:30", durationSec: 570, year: "2007", plays: "1.4M", album: "Ishq", genre: ["Sufi", "Kafi"], mood: ["Devotional", "Ecstatic"], tags: ["abida", "sufi"],
+    lyrics: [{ time: 0, line: "میں صوفی ہوں" }, { time: 7, line: "Main sufi hoon" }, { time: 14, line: "بے خود ہوں بے نیاز ہوں" }, { time: 21, line: "bekhood hoon beniaz hoon" }] },
+  { id: "yaar-ko-humne", title: "Yaar Ko Humne Ja Ba Ja Dekha", artistId: "abida-parveen", artist: "Abida Parveen", duration: "7:55", durationSec: 475, year: "1998", plays: "1.2M", album: "Mast Nazron Se", genre: ["Ghazal", "Sufi"], mood: ["Devotional"], tags: ["abida", "rumi"],
+    lyrics: [{ time: 0, line: "یار کو ہم نے جا بجا دیکھا" }, { time: 8, line: "Yaar ko humne ja ba ja dekha" }, { time: 16, line: "کہیں ظاہر کہیں چھپا دیکھا" }, { time: 24, line: "kahin zahir kahin chupa dekha" }] },
+
+  // ── LATA MANGESHKAR ───────────────────────────────────────────
+  { id: "ajeeb-dastan", title: "Ajeeb Dastan Hai Yeh", artistId: "lata-mangeshkar", artist: "Lata Mangeshkar", duration: "4:22", durationSec: 262, year: "1960", plays: "7.4M", album: "Dil Apna Aur Preet Parai", genre: ["Film", "Classical"], mood: ["Melancholic", "Romantic"], tags: ["lata", "classic", "film"],
+    lyrics: [{ time: 0, line: "अजीब दास्ताँ है यह" }, { time: 6, line: "कहाँ शुरू कहाँ ख़त्म" }, { time: 12, line: "Ajeeb dastan hai yeh" }, { time: 18, line: "kahaan shuru kahaan khatam" }] },
+  { id: "tere-bina-zindagi", title: "Tere Bina Zindagi Se Koi", artistId: "lata-mangeshkar", artist: "Lata Mangeshkar", duration: "4:55", durationSec: 295, year: "1977", plays: "5.2M", album: "Aandhi", genre: ["Film"], mood: ["Longing", "Romantic"], tags: ["lata", "gulzar", "aandhi"],
+    lyrics: [{ time: 0, line: "तेरे बिना ज़िंदगी से कोई" }, { time: 7, line: "शिकवा तो नहीं" }, { time: 14, line: "Tere bina zindagi se koi" }, { time: 21, line: "shikwa to nahin" }] },
+  { id: "naina-barse", title: "Naina Barse Rimjhim Rimjhim", artistId: "lata-mangeshkar", artist: "Lata Mangeshkar", duration: "3:40", durationSec: 220, year: "1964", plays: "4.8M", album: "Woh Kaun Thi", genre: ["Film"], mood: ["Melancholic", "Longing"], tags: ["lata", "classic", "film"],
+    lyrics: [{ time: 0, line: "नैना बरसे रिमझिम रिमझिम" }, { time: 6, line: "पिया तोरे आवन की आस" }, { time: 12, line: "Naina barse rimjhim rimjhim" }, { time: 18, line: "piya tore aavan ki aas" }] },
+
+  // ── BHUPINDER SINGH ───────────────────────────────────────────
+  { id: "do-diwane-shehar", title: "Do Diwane Shehar Mein", artistId: "bhupinder-singh", artist: "Bhupinder Singh", duration: "5:20", durationSec: 320, year: "1977", plays: "1.8M", album: "Do Diwane Shehar Mein", genre: ["Film", "Ghazal"], mood: ["Romantic"], tags: ["bhupinder", "gulzar"],
+    lyrics: [{ time: 0, line: "दो दीवाने शहर में" }, { time: 6, line: "रात में या दोपहर में" }, { time: 12, line: "Do diwane shehar mein" }, { time: 18, line: "raat mein ya dopahar mein" }] },
+  { id: "huzoor-is-qadar", title: "Huzoor Is Qadar Bhi Na Itaraiye", artistId: "bhupinder-singh", artist: "Bhupinder Singh", duration: "5:44", durationSec: 344, year: "1978", plays: "1.2M", album: "Ghazals", genre: ["Ghazal"], mood: ["Playful"], tags: ["bhupinder"],
+    lyrics: [{ time: 0, line: "हुज़ूर इस क़दर भी न इतराइये" }, { time: 7, line: "Huzoor is qadar bhi na itaraiye" }, { time: 14, line: "कि दिल टूट जाए" }, { time: 20, line: "ki dil toot jaaye" }] },
+
+  // ── IQBAL BANO ────────────────────────────────────────────────
+  { id: "hum-dekhenge", title: "Hum Dekhenge", artistId: "iqbal-bano", artist: "Iqbal Bano", duration: "9:15", durationSec: 555, year: "1985", plays: "4.7M", album: "Hum Dekhenge", genre: ["Ghazal", "Resistance"], mood: ["Defiant", "Devotional"], tags: ["iqbal-bano", "faiz", "resistance"],
+    lyrics: [{ time: 0, line: "ہم دیکھیں گے" }, { time: 6, line: "لازم ہے کہ ہم بھی دیکھیں گے" }, { time: 12, line: "Hum dekhenge" }, { time: 18, line: "laazim hai ke hum bhi dekhenge" }, { time: 28, line: "وہ دن کہ جس کا وعدہ ہے" }, { time: 36, line: "woh din ke jis ka wada hai" }] },
+  { id: "mujhse-pehli-si", title: "Mujhse Pehli Si Mohabbat", artistId: "iqbal-bano", artist: "Iqbal Bano", duration: "7:30", durationSec: 450, year: "1979", plays: "2.1M", album: "Dast-e-Saba", genre: ["Ghazal"], mood: ["Melancholic", "Heartbreak"], tags: ["iqbal-bano", "faiz"],
+    lyrics: [{ time: 0, line: "مجھ سے پہلی سی محبت میری محبوب نہ مانگ" }, { time: 9, line: "Mujhse pehli si mohabbat meri mehboob na maang" }, { time: 18, line: "میں نے سمجھا تھا کہ تو ہے تو درخشاں ہے حیات" }, { time: 27, line: "tera gham hai to gham-e-dehr ka jhagda kya hai" }] },
+
+  // ── RAHAT FATEH ALI KHAN ──────────────────────────────────────
+  { id: "o-re-piya", title: "O Re Piya", artistId: "rahat-fateh-ali-khan", artist: "Rahat Fateh Ali Khan", duration: "5:28", durationSec: 328, year: "2007", plays: "4.5M", album: "Aaja Nachle", genre: ["Film", "Sufi"], mood: ["Romantic", "Devotional"], tags: ["rahat", "film", "bollywood"],
+    lyrics: [{ time: 0, line: "ओ रे पिया" }, { time: 5, line: "O re piya" }, { time: 10, line: "हाय रे पिया" }, { time: 15, line: "haay re piya" }, { time: 22, line: "कोई ले गया जिया" }, { time: 28, line: "koi le gaya jiya" }] },
+  { id: "tere-mast-mast", title: "Tere Mast Mast Do Nain", artistId: "rahat-fateh-ali-khan", artist: "Rahat Fateh Ali Khan", duration: "4:50", durationSec: 290, year: "2010", plays: "6.2M", album: "Dabangg", genre: ["Film", "Sufi"], mood: ["Romantic"], tags: ["rahat", "dabangg", "film"],
+    lyrics: [{ time: 0, line: "तेरे मस्त मस्त दो नैन" }, { time: 6, line: "मेरी पीते हैं पीनी" }, { time: 12, line: "Tere mast mast do nain" }, { time: 18, line: "meri peete hain peeni" }] },
+  { id: "afreen-afreen-rahat", title: "Afreen Afreen", artistId: "rahat-fateh-ali-khan", artist: "Rahat Fateh Ali Khan", duration: "6:10", durationSec: 370, year: "2016", plays: "8.9M", album: "Coke Studio Season 9", genre: ["Sufi", "Folk"], mood: ["Devotional", "Romantic"], tags: ["rahat", "coke-studio", "momina"],
+    lyrics: [{ time: 0, line: "آفریں آفریں" }, { time: 6, line: "Afreen afreen" }, { time: 12, line: "رہے نام اللہ کا" }, { time: 18, line: "rahe naam Allah ka" }] },
+
+  // ── BEGUM AKHTAR ──────────────────────────────────────────────
+  { id: "ae-mohabbat-tere-anjam", title: "Ae Mohabbat Tere Anjam Pe Rona Aaya", artistId: "begum-akhtar", artist: "Begum Akhtar", duration: "7:20", durationSec: 440, year: "1950", plays: "0.9M", album: "Ae Mohabbat", genre: ["Ghazal", "Thumri"], mood: ["Heartbreak", "Soulful"], tags: ["begum-akhtar", "classic"],
+    lyrics: [{ time: 0, line: "اے محبت تیرے انجام پہ رونا آیا" }, { time: 9, line: "Ae mohabbat tere anjam pe rona aaya" }, { time: 18, line: "جانے کیوں آج تیرے نام پہ رونا آیا" }, { time: 27, line: "jaane kyun aaj tere naam pe rona aaya" }] },
+  { id: "woh-jo-hum-mein-tum-mein", title: "Woh Jo Hum Mein Tum Mein Qarar Tha", artistId: "begum-akhtar", artist: "Begum Akhtar", duration: "6:45", durationSec: 405, year: "1965", plays: "1.2M", album: "Aye Dil-e-Nadan", genre: ["Ghazal"], mood: ["Longing", "Nostalgic"], tags: ["begum-akhtar", "faiz"],
+    lyrics: [{ time: 0, line: "وہ جو ہم میں تم میں قرار تھا" }, { time: 8, line: "Woh jo hum mein tum mein qarar tha" }, { time: 16, line: "تمہیں یاد ہو کہ نہ یاد ہو" }, { time: 24, line: "tumhein yaad ho ke na yaad ho" }] },
+
+  // ── HARIHARAN ─────────────────────────────────────────────────
+  { id: "log-kehte-hain", title: "Log Kehte Hain Main Sharabi Hoon", artistId: "hariharan", artist: "Hariharan", duration: "5:40", durationSec: 340, year: "1990", plays: "1.4M", album: "Hariharan", genre: ["Ghazal"], mood: ["Philosophical", "Playful"], tags: ["hariharan", "ghazal"],
+    lyrics: [{ time: 0, line: "लोग कहते हैं मैं शराबी हूँ" }, { time: 7, line: "Log kehte hain main sharabi hoon" }, { time: 14, line: "उनको क्या पता इश्क़ का नशा" }, { time: 21, line: "unko kya pata ishq ka nasha" }] },
+  { id: "kahin-door-jab", title: "Kahin Door Jab Din Dhal Jaaye", artistId: "hariharan", artist: "Hariharan", duration: "4:50", durationSec: 290, year: "1971", plays: "2.2M", album: "Anand", genre: ["Film"], mood: ["Nostalgic", "Melancholic"], tags: ["hariharan", "anand", "film"],
+    lyrics: [{ time: 0, line: "कहीं दूर जब दिन ढल जाये" }, { time: 7, line: "साँझ की दुल्हन बदन चुराये" }, { time: 14, line: "Kahin door jab din dhal jaaye" }, { time: 21, line: "saanjh ki dulhan badan churaaye" }] },
+
+  // ── GHULAM ALI (extra) ────────────────────────────────────────
+  { id: "ek-haseen-shaam", title: "Ek Haseen Shaam Ko", artistId: "ghulam-ali", artist: "Ghulam Ali", duration: "5:15", durationSec: 315, year: "1984", plays: "2.6M", album: "Aawaz", genre: ["Ghazal"], mood: ["Romantic", "Nostalgic"], tags: ["ghulam-ali", "classic"],
+    lyrics: [{ time: 0, line: "ایک حسین شام کو" }, { time: 6, line: "Ek haseen shaam ko" }, { time: 12, line: "دل میرا کھو گیا" }, { time: 18, line: "dil mera kho gaya" }] },
+
+  // ── PANKAJ UDHAS (extra) ──────────────────────────────────────
+  { id: "aur-ahista", title: "Aur Ahista Kijiye Baatein", artistId: "pankaj-udhas", artist: "Pankaj Udhas", duration: "5:25", durationSec: 325, year: "1985", plays: "1.7M", album: "Nayaab", genre: ["Ghazal"], mood: ["Romantic"], tags: ["pankaj", "nayaab"],
+    lyrics: [{ time: 0, line: "और आहिस्ता कीजिये बातें" }, { time: 7, line: "Aur ahista kijiye baatein" }, { time: 14, line: "रात भर की है यह रातें" }, { time: 21, line: "raat bhar ki hai yeh raatein" }] },
+
+  // ── FARIDA KHANUM (extra) ─────────────────────────────────────
+  { id: "aye-ishq-humein-barbaad", title: "Aye Ishq Humein Barbaad Na Kar", artistId: "farida-khanum", artist: "Farida Khanum", duration: "5:50", durationSec: 350, year: "1980", plays: "0.9M", album: "Mehfil", genre: ["Ghazal"], mood: ["Heartbreak"], tags: ["farida"],
+    lyrics: [{ time: 0, line: "اے عشق ہمیں برباد نہ کر" }, { time: 7, line: "Aye ishq humein barbaad na kar" }, { time: 14, line: "ہم پہلے ہی کافی اداس ہیں" }, { time: 21, line: "hum pehle hi kaafi udaas hain" }] },
+
+  // ── MALIKA PUKHRAJ ────────────────────────────────────────────
+  { id: "abhi-to-main-jawan", title: "Abhi To Main Jawan Hoon", artistId: "malika-pukhraj", artist: "Malika Pukhraj", duration: "6:30", durationSec: 390, year: "1958", plays: "1.6M", album: "Abhi To Main Jawan Hoon", genre: ["Ghazal", "Thumri"], mood: ["Defiant", "Joyful"], tags: ["malika", "classic"],
+    lyrics: [{ time: 0, line: "ابھی تو میں جوان ہوں" }, { time: 7, line: "Abhi to main jawan hoon" }, { time: 14, line: "ابھی تو مجھے جینا ہے" }, { time: 21, line: "abhi to mujhe jeena hai" }] },
+
+  // ── USTAD RASHID KHAN ────────────────────────────────────────
+  { id: "piya-bin-nahin", title: "Piya Bin Nahin Aavat Chain", artistId: "ustad-rashid-khan", artist: "Ustad Rashid Khan", duration: "12:30", durationSec: 750, year: "2000", plays: "0.7M", album: "Bandish", genre: ["Classical", "Thumri"], mood: ["Longing", "Devotional"], tags: ["rashid-khan", "classical", "thumri"],
+    lyrics: [{ time: 0, line: "پیا بن نہیں آوت چین" }, { time: 9, line: "Piya bin nahin aavat chain" }, { time: 18, line: "نینوں نیند نہ آوے" }, { time: 27, line: "nainon neend na aave" }] },
+]
+export const ALL_SONGS = [...SONGS, ...EXTRA_SONGS]

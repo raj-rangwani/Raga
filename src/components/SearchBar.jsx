@@ -1,32 +1,39 @@
 // src/components/SearchBar.jsx
-// Reusable search bar with live fuzzy dropdown
-// Usage: <SearchBar placeholder="..." onSelect={fn} autoFocus />
-
 import { useState, useEffect, useRef, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
 import { Search, X, Music2, User, ListMusic, TrendingUp } from "lucide-react"
 import { getSuggestions } from "../utils/search"
+import { useMusicPlayer } from "./MusicPlayerContext"
+import { searchSong } from "../utils/youtube"
 
 const TYPE_CONFIG = {
-  artist: { icon: User,      color: "#c4a882", label: "Artist"   },
-  song:   { icon: Music2,    color: "#8ba9c4", label: "Song"     },
-  playlist:{ icon: ListMusic, color: "#82b89a", label: "Playlist" },
+  artist:   { icon: User,      color: "#c4a882", label: "Artist"   },
+  song:     { icon: Music2,    color: "#8ba9c4", label: "Song"     },
+  playlist: { icon: ListMusic, color: "#82b89a", label: "Playlist" },
 }
 
 const HOT_SEARCHES = [
   "Jagjit Singh", "Mehdi Hassan", "Nusrat", "Ghazal", "Qawwali", "Ranjish Hi Sahi"
 ]
 
-export default function SearchBar({ placeholder = "Search artists, songs, playlists…", onSelect, autoFocus = false, className = "" }) {
-  const [query, setQuery] = useState("")
+export default function SearchBar({
+  placeholder = "Search artists, songs, playlists…",
+  onSelect,
+  autoFocus = false,
+  className = "",
+}) {
+  const [query,       setQuery]       = useState("")
   const [suggestions, setSuggestions] = useState([])
-  const [focused, setFocused] = useState(false)
-  const [activeIdx, setActiveIdx] = useState(-1)
-  const inputRef = useRef(null)
-  const containerRef = useRef(null)
-  const navigate = useNavigate()
+  const [focused,     setFocused]     = useState(false)
+  const [activeIdx,   setActiveIdx]   = useState(-1)
+  const [loadingId,   setLoadingId]   = useState(null) // song id being fetched
 
-  // Debounced search
+  const inputRef     = useRef(null)
+  const containerRef = useRef(null)
+  const navigate     = useNavigate()
+  const { playSong } = useMusicPlayer()
+
+  // Debounced suggestions
   useEffect(() => {
     if (!query.trim()) { setSuggestions([]); setActiveIdx(-1); return }
     const t = setTimeout(() => {
@@ -39,39 +46,59 @@ export default function SearchBar({ placeholder = "Search artists, songs, playli
   // Click outside closes dropdown
   useEffect(() => {
     const handler = (e) => {
-      if (containerRef.current && !containerRef.current.contains(e.target)) {
+      if (containerRef.current && !containerRef.current.contains(e.target))
         setFocused(false)
-      }
     }
     document.addEventListener("mousedown", handler)
     return () => document.removeEventListener("mousedown", handler)
   }, [])
 
-  const handleSelect = useCallback((item) => {
+  const handleSelect = useCallback(async (item) => {
     setQuery(item.label)
     setFocused(false)
     setSuggestions([])
+
+    // If caller provided custom handler, use it
     if (onSelect) { onSelect(item); return }
-    // Default navigation
-    if (item.type === "artist") navigate(`/artist-detail`)
-    else if (item.type === "playlist") navigate(`/playlists`)
-    else if (item.type === "song") navigate(`/artists`)
-  }, [navigate, onSelect])
+
+    if (item.type === "artist") {
+      // Navigate to the specific artist detail page
+      navigate(`/artist/${item.id}`)
+    } else if (item.type === "playlist") {
+      navigate("/playlists")
+    } else if (item.type === "song") {
+      // Search YouTube for the song and play it directly
+      setLoadingId(item.id)
+      try {
+        const result = await searchSong(item.label, item.sub)
+        if (result?.videoId) {
+          playSong({
+            title:       item.label,
+            artist:      item.sub,
+            videoId:     result.videoId,
+            thumbnail:   result.thumbnail  || null,
+            duration:    result.duration   || null,
+            durationSec: result.durationSec || null,
+          })
+        }
+      } catch (e) {
+        console.warn("SearchBar: YouTube fetch failed", e)
+      } finally {
+        setLoadingId(null)
+      }
+    }
+  }, [navigate, onSelect, playSong])
 
   const handleHotSearch = (term) => {
     setQuery(term)
-    if (inputRef.current) inputRef.current.focus()
+    inputRef.current?.focus()
   }
 
   const handleKeyDown = (e) => {
     const items = suggestions
-    if (e.key === "ArrowDown") {
-      e.preventDefault()
-      setActiveIdx(i => Math.min(i + 1, items.length - 1))
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault()
-      setActiveIdx(i => Math.max(i - 1, -1))
-    } else if (e.key === "Enter") {
+    if (e.key === "ArrowDown") { e.preventDefault(); setActiveIdx(i => Math.min(i + 1, items.length - 1)) }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setActiveIdx(i => Math.max(i - 1, -1)) }
+    else if (e.key === "Enter") {
       if (activeIdx >= 0 && items[activeIdx]) handleSelect(items[activeIdx])
       else if (items[0]) handleSelect(items[0])
     } else if (e.key === "Escape") {
@@ -88,10 +115,10 @@ export default function SearchBar({ placeholder = "Search artists, songs, playli
       <div
         className="relative flex items-center transition-all duration-300"
         style={{
-          background: focused ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.04)",
-          border: focused ? "1px solid rgba(196,168,130,0.35)" : "1px solid rgba(255,255,255,0.08)",
+          background:   focused ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.04)",
+          border:       focused ? "1px solid rgba(196,168,130,0.35)" : "1px solid rgba(255,255,255,0.08)",
           borderRadius: showDropdown ? "16px 16px 0 0" : "16px",
-          boxShadow: focused ? "0 0 0 3px rgba(196,168,130,0.06)" : "none",
+          boxShadow:    focused ? "0 0 0 3px rgba(196,168,130,0.06)" : "none",
         }}
       >
         <Search
@@ -125,43 +152,42 @@ export default function SearchBar({ placeholder = "Search artists, songs, playli
         <div
           className="absolute left-0 right-0 z-[200] overflow-hidden"
           style={{
-            background: "linear-gradient(to bottom, #110c06, #0d0908)",
-            border: "1px solid rgba(196,168,130,0.15)",
-            borderTop: "none",
+            background:   "linear-gradient(to bottom, #110c06, #0d0908)",
+            border:       "1px solid rgba(196,168,130,0.15)",
+            borderTop:    "none",
             borderRadius: "0 0 16px 16px",
-            boxShadow: "0 20px 60px rgba(0,0,0,0.6)",
+            boxShadow:    "0 20px 60px rgba(0,0,0,0.6)",
           }}
         >
-          {/* Suggestions */}
           {suggestions.length > 0 ? (
             <div className="py-2">
               {suggestions.map((item, i) => {
-                const cfg = TYPE_CONFIG[item.type]
+                const cfg  = TYPE_CONFIG[item.type]
                 const Icon = cfg.icon
+                const isLoading = loadingId === item.id
                 return (
                   <button
                     key={`${item.type}-${item.id}`}
                     onClick={() => handleSelect(item)}
+                    disabled={!!loadingId}
                     className="w-full flex items-center gap-3 px-4 py-3 transition-all duration-150 text-left"
-                    style={{
-                      background: i === activeIdx ? "rgba(196,168,130,0.07)" : "transparent",
-                    }}
+                    style={{ background: i === activeIdx ? "rgba(196,168,130,0.07)" : "transparent" }}
                   >
                     <div
                       className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
                       style={{ background: cfg.color + "18" }}
                     >
-                      <Icon size={14} style={{ color: cfg.color }} />
+                      {isLoading
+                        ? <div className="w-3.5 h-3.5 border border-t-transparent rounded-full animate-spin" style={{ borderColor: cfg.color }} />
+                        : <Icon size={14} style={{ color: cfg.color }} />
+                      }
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p
-                        className="text-sm truncate"
-                        style={{ color: "rgba(255,255,255,0.85)", fontFamily: "Playfair Display" }}
-                      >
+                      <p className="text-sm truncate" style={{ color: "rgba(255,255,255,0.85)", fontFamily: "Playfair Display" }}>
                         {highlightMatch(item.label, query)}
                       </p>
                       <p className="text-xs truncate mt-0.5" style={{ color: "rgba(255,255,255,0.28)", fontFamily: "Inter" }}>
-                        {item.sub}
+                        {item.type === "song" ? `${item.sub} · tap to play` : item.sub}
                       </p>
                     </div>
                     <span
@@ -175,7 +201,7 @@ export default function SearchBar({ placeholder = "Search artists, songs, playli
               })}
             </div>
           ) : (
-            /* Hot searches when empty */
+            /* Hot searches when input is empty */
             <div className="p-4">
               <div className="flex items-center gap-2 mb-3">
                 <TrendingUp size={12} style={{ color: "rgba(196,168,130,0.5)" }} />
@@ -191,8 +217,8 @@ export default function SearchBar({ placeholder = "Search artists, songs, playli
                     className="text-xs px-3 py-1.5 rounded-full transition-all duration-200 hover:scale-105"
                     style={{
                       background: "rgba(255,255,255,0.05)",
-                      border: "1px solid rgba(255,255,255,0.08)",
-                      color: "rgba(255,255,255,0.5)",
+                      border:     "1px solid rgba(255,255,255,0.08)",
+                      color:      "rgba(255,255,255,0.5)",
                       fontFamily: "Inter",
                     }}
                   >
@@ -208,7 +234,6 @@ export default function SearchBar({ placeholder = "Search artists, songs, playli
   )
 }
 
-// Bold the matching characters
 function highlightMatch(text, query) {
   if (!query) return text
   const idx = text.toLowerCase().indexOf(query.toLowerCase())

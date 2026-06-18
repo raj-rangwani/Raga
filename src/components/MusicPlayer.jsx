@@ -1,9 +1,10 @@
+// src/components/MusicPlayer.jsx
 import { useState, useRef, useEffect } from "react"
 import { useMusicPlayer } from "./MusicPlayerContext"
 import {
   Play, Pause, SkipBack, SkipForward,
   Heart, Volume2, VolumeX, ChevronDown,
-  Shuffle, Repeat, X, Mic2, Music2
+  Shuffle, Repeat, X, Mic2, Tv2
 } from "lucide-react"
 
 // ── Vinyl disc ───────────────────────────────────────────────
@@ -29,7 +30,6 @@ function VinylDisc({ spinning, size = 220 }) {
           }}
         />
       ))}
-      {/* amber label */}
       <div
         className="absolute rounded-full flex items-center justify-center"
         style={{
@@ -55,7 +55,6 @@ function WaveformBars({ playing }) {
           style={{
             height: playing ? `${h * 1.2}px` : "2px",
             background: "#c4a882",
-            transition: `height 0.${2 + (i % 4)}s ease`,
             animation: playing ? `waveBar ${0.5 + (i % 4) * 0.15}s ease-in-out ${i * 0.04}s infinite alternate` : "none",
           }}
         />
@@ -94,7 +93,7 @@ function LyricsPanel({ lyrics, elapsed }) {
       {lyrics.map((l, i) => (
         <p
           key={i}
-          className="text-center leading-relaxed transition-all duration-600"
+          className="text-center leading-relaxed"
           style={{
             fontFamily: i % 2 === 0 ? "Playfair Display" : "Inter",
             fontSize: i === activeIdx ? "1.4rem" : "1rem",
@@ -123,26 +122,46 @@ export default function MusicPlayer() {
     currentSong, isPlaying, progress, elapsed, liked,
     songData, totalDuration, formatTime,
     handleNext, handlePrev, seek, toggleLike, setIsPlaying,
+    volume, setVolume,          // ← from context, controls actual YT player
+    videoVisible, toggleVideo,  // ← from context
   } = useMusicPlayer()
 
-  const [expanded, setExpanded] = useState(false)
-  const [dismissed, setDismissed] = useState(false)
-  const [volume, setVolume] = useState(80)
-  const [muted, setMuted] = useState(false)
-  const [shuffle, setShuffle] = useState(false)
-  const [repeat, setRepeat] = useState(false)
+  const [expanded,   setExpanded]   = useState(false)
+  const [dismissed,  setDismissed]  = useState(false)
+  const [muted,      setMuted]      = useState(false)
+  const [prevVol,    setPrevVol]    = useState(80)  // remember vol before mute
+  const [shuffle,    setShuffle]    = useState(false)
+  const [repeat,     setRepeat]     = useState(false)
   const [activeView, setActiveView] = useState("cover")
   const progressBarRef = useRef(null)
-  const touchStartY = useRef(null)
+  const touchStartY    = useRef(null)
 
-  // Re-show mini bar when a new song starts
   useEffect(() => { if (currentSong) setDismissed(false) }, [currentSong])
 
-  const isLiked = liked.has(currentSong?.title)
-  const lyrics = songData?.lyrics || null
+  const isLiked  = liked.has(currentSong?.title)
+  const lyrics   = songData?.lyrics || null
+  const hasVideo = !!currentSong?.videoId
+
+  // Mute: set YT volume to 0 but remember previous
+  const handleMuteToggle = () => {
+    if (muted) {
+      setVolume(prevVol)
+      setMuted(false)
+    } else {
+      setPrevVol(volume)
+      setVolume(0)
+      setMuted(true)
+    }
+  }
+
+  const handleVolumeChange = (v) => {
+    setVolume(v)
+    if (v > 0) setMuted(false)
+    else setMuted(true)
+  }
 
   const onTouchStart = (e) => { touchStartY.current = e.touches[0].clientY }
-  const onTouchEnd = (e) => {
+  const onTouchEnd   = (e) => {
     if (!touchStartY.current) return
     const dy = touchStartY.current - e.changedTouches[0].clientY
     if (Math.abs(dy) > 60) setActiveView(dy > 0 ? "lyrics" : "cover")
@@ -171,23 +190,20 @@ export default function MusicPlayer() {
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
-        {/* Rich layered background — deep sepia/dark amber that matches Raga vibe */}
+        {/* Background */}
         <div className="absolute inset-0" style={{
           background: "linear-gradient(165deg, #110a04 0%, #0d0804 30%, #090808 60%, #07090d 100%)",
         }} />
-        {/* Noise grain texture */}
         <div className="absolute inset-0 opacity-[0.03]" style={{
           backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E")`,
           backgroundSize: "200px 200px",
         }} />
-        {/* Warm amber glow top-center */}
         <div className="absolute pointer-events-none" style={{
           top: "-100px", left: "50%", transform: "translateX(-50%)",
           width: "600px", height: "500px",
           background: "radial-gradient(ellipse, rgba(196,168,130,0.07) 0%, transparent 65%)",
           filter: "blur(40px)",
         }} />
-        {/* Deep bottom shadow */}
         <div className="absolute bottom-0 left-0 right-0 h-64 pointer-events-none" style={{
           background: "linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 100%)",
         }} />
@@ -201,41 +217,45 @@ export default function MusicPlayer() {
             <ChevronDown size={22} className="text-zinc-500" />
           </button>
 
-          <div className="text-center">
-            <p className="text-[10px] tracking-[0.35em] uppercase text-zinc-600" style={{ fontFamily: "Inter" }}>
-              Now Playing
-            </p>
-          </div>
+          <p className="text-[10px] tracking-[0.35em] uppercase text-zinc-600" style={{ fontFamily: "Inter" }}>
+            Now Playing
+          </p>
 
-          {/* Lyrics toggle — prominent pill button */}
-          <button
-            onClick={() => setActiveView(v => v === "lyrics" ? "cover" : "lyrics")}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-full transition-all duration-300"
-            style={{
-              background: activeView === "lyrics" ? "rgba(196,168,130,0.18)" : "rgba(255,255,255,0.06)",
-              border: activeView === "lyrics" ? "1px solid rgba(196,168,130,0.35)" : "1px solid rgba(255,255,255,0.1)",
-            }}
-          >
-            <Mic2 size={14} style={{ color: activeView === "lyrics" ? "#c4a882" : "rgba(255,255,255,0.45)" }} />
-            <span
-              className="text-xs font-medium"
+          <div className="flex items-center gap-2">
+            {hasVideo && (
+              <button
+                onClick={toggleVideo}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-full transition-all duration-300"
+                style={{
+                  background: videoVisible ? "rgba(196,168,130,0.18)" : "rgba(255,255,255,0.06)",
+                  border: videoVisible ? "1px solid rgba(196,168,130,0.35)" : "1px solid rgba(255,255,255,0.1)",
+                }}
+              >
+                <Tv2 size={14} style={{ color: videoVisible ? "#c4a882" : "rgba(255,255,255,0.45)" }} />
+                <span className="text-xs font-medium" style={{ color: videoVisible ? "#c4a882" : "rgba(255,255,255,0.45)", fontFamily: "Inter" }}>
+                  {videoVisible ? "Audio" : "Video"}
+                </span>
+              </button>
+            )}
+            <button
+              onClick={() => setActiveView(v => v === "lyrics" ? "cover" : "lyrics")}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-full transition-all duration-300"
               style={{
-                color: activeView === "lyrics" ? "#c4a882" : "rgba(255,255,255,0.45)",
-                fontFamily: "Inter",
+                background: activeView === "lyrics" ? "rgba(196,168,130,0.18)" : "rgba(255,255,255,0.06)",
+                border: activeView === "lyrics" ? "1px solid rgba(196,168,130,0.35)" : "1px solid rgba(255,255,255,0.1)",
               }}
             >
-              Lyrics
-            </span>
-          </button>
+              <Mic2 size={14} style={{ color: activeView === "lyrics" ? "#c4a882" : "rgba(255,255,255,0.45)" }} />
+              <span className="text-xs font-medium" style={{ color: activeView === "lyrics" ? "#c4a882" : "rgba(255,255,255,0.45)", fontFamily: "Inter" }}>
+                Lyrics
+              </span>
+            </button>
+          </div>
         </div>
 
-        {/* ── Art / Lyrics area ── */}
+        {/* ── Art / Lyrics ── */}
         <div className="relative z-10 flex-1 flex flex-col items-center justify-center min-h-0 overflow-hidden px-8">
-          {/* Swipe hint */}
-          <p
-            className="absolute top-0 left-1/2 -translate-x-1/2 text-[10px] text-zinc-700 pointer-events-none"
-            style={{ fontFamily: "Inter", letterSpacing: "0.1em" }}
-          >
+          <p className="absolute top-0 left-1/2 -translate-x-1/2 text-[10px] text-zinc-700 pointer-events-none" style={{ fontFamily: "Inter", letterSpacing: "0.1em" }}>
             {activeView === "cover" ? "↑ tap Lyrics or swipe up" : "↓ swipe down for cover"}
           </p>
 
@@ -251,15 +271,18 @@ export default function MusicPlayer() {
           >
             <VinylDisc spinning={isPlaying} size={220} />
             <div className="text-center px-6">
-              <h2
-                className="text-3xl text-amber-50 leading-tight mb-2"
-                style={{ fontFamily: "Playfair Display" }}
-              >
+              <h2 className="text-3xl text-amber-50 leading-tight mb-2" style={{ fontFamily: "Playfair Display" }}>
                 {currentSong.title}
               </h2>
               <p className="text-zinc-500 text-sm" style={{ fontFamily: "Inter" }}>
                 {currentSong.artist || "Jagjit Singh"}
               </p>
+              {videoVisible && hasVideo && (
+                <div className="flex items-center justify-center gap-1.5 mt-3">
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                  <span className="text-[11px] text-amber-400/70" style={{ fontFamily: "Inter" }}>Video playing in corner</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -273,7 +296,7 @@ export default function MusicPlayer() {
               pointerEvents: activeView === "lyrics" ? "auto" : "none",
             }}
           >
-            <div className="text-center pt-6 pb-2 flex-shrink-0">
+            <div className="text-center pt-6 pb-2">
               <p className="text-xs tracking-widest uppercase" style={{ color: "rgba(196,168,130,0.35)", fontFamily: "Inter" }}>
                 {currentSong.title}
               </p>
@@ -284,33 +307,22 @@ export default function MusicPlayer() {
 
         {/* ── Controls ── */}
         <div className="relative z-10 flex-shrink-0 px-8 pb-14">
-          {/* Song info + like row */}
+          {/* Song info + like */}
           <div className="flex items-center justify-between mb-5">
             <div className="flex-1 min-w-0">
               {activeView === "lyrics" && (
                 <>
-                  <p className="text-base text-amber-50 truncate" style={{ fontFamily: "Playfair Display" }}>
-                    {currentSong.title}
-                  </p>
-                  <p className="text-zinc-500 text-xs mt-0.5" style={{ fontFamily: "Inter" }}>
-                    {currentSong.artist || "Jagjit Singh"}
-                  </p>
+                  <p className="text-base text-amber-50 truncate" style={{ fontFamily: "Playfair Display" }}>{currentSong.title}</p>
+                  <p className="text-zinc-500 text-xs mt-0.5" style={{ fontFamily: "Inter" }}>{currentSong.artist || "Jagjit Singh"}</p>
                 </>
               )}
             </div>
             <button onClick={() => toggleLike(currentSong.title)} className="ml-4 flex-shrink-0">
-              <Heart
-                size={22}
-                style={{
-                  color: isLiked ? "#e05454" : "rgba(255,255,255,0.25)",
-                  fill: isLiked ? "#e05454" : "none",
-                  transition: "all 0.25s",
-                }}
-              />
+              <Heart size={22} style={{ color: isLiked ? "#e05454" : "rgba(255,255,255,0.25)", fill: isLiked ? "#e05454" : "none", transition: "all 0.25s" }} />
             </button>
           </div>
 
-          {/* Progress */}
+          {/* Progress bar */}
           <div className="mb-4">
             <div
               ref={progressBarRef}
@@ -318,13 +330,10 @@ export default function MusicPlayer() {
               style={{ background: "rgba(255,255,255,0.08)" }}
               onClick={handleProgressClick}
             >
-              <div
-                className="h-full rounded-full"
-                style={{ width: `${progress}%`, background: "linear-gradient(90deg, #7a5a30, #c4a882)" }}
-              />
+              <div className="h-full rounded-full" style={{ width: `${progress}%`, background: "linear-gradient(90deg, #7a5a30, #c4a882)" }} />
               <div
                 className="absolute top-1/2 w-3 h-3 rounded-full bg-amber-200 opacity-0 group-hover:opacity-100 -translate-y-1/2 transition-opacity pointer-events-none"
-                style={{ left: `${progress}%`, transform: `translateX(-50%) translateY(-50%)` }}
+                style={{ left: `${progress}%`, transform: "translateX(-50%) translateY(-50%)" }}
               />
             </div>
             <div className="flex justify-between mt-1.5">
@@ -333,7 +342,7 @@ export default function MusicPlayer() {
             </div>
           </div>
 
-          {/* Controls row */}
+          {/* Playback controls */}
           <div className="flex items-center justify-between mb-7">
             <button
               onClick={() => setShuffle(s => !s)}
@@ -350,14 +359,11 @@ export default function MusicPlayer() {
               <button
                 onClick={() => setIsPlaying(p => !p)}
                 className="w-16 h-16 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95"
-                style={{
-                  background: "linear-gradient(135deg, #d4b896, #c4a882)",
-                  boxShadow: "0 0 30px rgba(196,168,130,0.25)",
-                }}
+                style={{ background: "linear-gradient(135deg, #d4b896, #c4a882)", boxShadow: "0 0 30px rgba(196,168,130,0.25)" }}
               >
                 {isPlaying
                   ? <Pause size={26} color="#0d0804" />
-                  : <Play size={26} color="#0d0804" style={{ marginLeft: 3 }} />
+                  : <Play  size={26} color="#0d0804" style={{ marginLeft: 3 }} />
                 }
               </button>
               <button onClick={handleNext} className="text-zinc-400 hover:text-white transition-colors duration-200">
@@ -374,19 +380,16 @@ export default function MusicPlayer() {
             </button>
           </div>
 
-          {/* Volume */}
+          {/* Volume — wired to context setVolume → actual YT player */}
           <div className="flex items-center gap-3">
-            <button onClick={() => setMuted(m => !m)} className="text-zinc-600 hover:text-zinc-400 transition-colors flex-shrink-0">
-              {muted ? <VolumeX size={15} /> : <Volume2 size={15} />}
+            <button onClick={handleMuteToggle} className="text-zinc-600 hover:text-zinc-400 transition-colors flex-shrink-0">
+              {muted || volume === 0 ? <VolumeX size={15} /> : <Volume2 size={15} />}
             </button>
             <div className="flex-1 relative h-1 rounded-full cursor-pointer" style={{ background: "rgba(255,255,255,0.08)" }}>
-              <div
-                className="h-full rounded-full"
-                style={{ width: `${muted ? 0 : volume}%`, background: "rgba(196,168,130,0.45)" }}
-              />
+              <div className="h-full rounded-full" style={{ width: `${muted ? 0 : volume}%`, background: "rgba(196,168,130,0.45)" }} />
               <input
                 type="range" min={0} max={100} value={muted ? 0 : volume}
-                onChange={e => { setVolume(+e.target.value); setMuted(false) }}
+                onChange={e => handleVolumeChange(+e.target.value)}
                 className="absolute inset-0 w-full opacity-0 cursor-pointer"
                 style={{ height: "100%" }}
               />
@@ -405,33 +408,21 @@ export default function MusicPlayer() {
           transition: "transform 0.48s cubic-bezier(0.32, 0.72, 0, 1)",
         }}
       >
-        {/* Background with rich sepia tint */}
         <div className="absolute inset-0" style={{
           background: "linear-gradient(to right, #110b05, #0e0905, #0a0804)",
           borderTop: "1px solid rgba(196,168,130,0.1)",
         }} />
-        {/* Amber shimmer line at top */}
         <div className="absolute top-0 left-0 right-0 h-[1px]" style={{
           background: "linear-gradient(to right, transparent, rgba(196,168,130,0.3), transparent)",
         }} />
 
         {/* Progress line */}
         <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: "rgba(255,255,255,0.04)" }}>
-          <div
-            className="h-full"
-            style={{
-              width: `${progress}%`,
-              background: "linear-gradient(90deg, rgba(122,90,48,0.6), rgba(196,168,130,0.8))",
-              transition: "width 1s linear",
-            }}
-          />
+          <div className="h-full" style={{ width: `${progress}%`, background: "linear-gradient(90deg, rgba(122,90,48,0.6), rgba(196,168,130,0.8))", transition: "width 1s linear" }} />
         </div>
 
-        <div
-          className="relative flex items-center gap-4 px-5 py-3 cursor-pointer"
-          onClick={() => setExpanded(true)}
-        >
-          {/* Spinning vinyl mini */}
+        <div className="relative flex items-center gap-4 px-5 py-3 cursor-pointer" onClick={() => setExpanded(true)}>
+          {/* Mini vinyl */}
           <div
             className="w-11 h-11 rounded-full flex-shrink-0 relative"
             style={{
@@ -440,41 +431,37 @@ export default function MusicPlayer() {
               boxShadow: "0 0 0 1px #3a2e1e, 0 0 12px rgba(196,168,130,0.08)",
             }}
           >
-            <div
-              className="absolute rounded-full"
-              style={{
-                width: "36%", height: "36%",
-                top: "32%", left: "32%",
-                background: "radial-gradient(circle, #d4b896, #7a5a30)",
-              }}
-            />
+            <div className="absolute rounded-full" style={{ width: "36%", height: "36%", top: "32%", left: "32%", background: "radial-gradient(circle, #d4b896, #7a5a30)" }} />
           </div>
 
           {/* Song info */}
           <div className="flex-1 min-w-0">
-            <p className="text-sm text-zinc-200 truncate" style={{ fontFamily: "Playfair Display" }}>
-              {currentSong.title}
-            </p>
+            <p className="text-sm text-zinc-200 truncate" style={{ fontFamily: "Playfair Display" }}>{currentSong.title}</p>
             <div className="flex items-center gap-2 mt-0.5">
-              <p className="text-xs text-zinc-600 truncate" style={{ fontFamily: "Inter" }}>
-                {currentSong.artist || "Jagjit Singh"}
-              </p>
+              <p className="text-xs text-zinc-600 truncate" style={{ fontFamily: "Inter" }}>{currentSong.artist || "Jagjit Singh"}</p>
               <WaveformBars playing={isPlaying} />
             </div>
           </div>
 
-          {/* Controls */}
-          <div className="flex items-center gap-2.5 flex-shrink-0" onClick={e => e.stopPropagation()}>
+          {/* Mini controls */}
+          <div className="flex items-center gap-2 flex-shrink-0" onClick={e => e.stopPropagation()}>
             <button onClick={() => toggleLike(currentSong.title)}>
-              <Heart
-                size={16}
-                style={{
-                  color: isLiked ? "#e05454" : "rgba(255,255,255,0.2)",
-                  fill: isLiked ? "#e05454" : "none",
-                  transition: "all 0.2s",
-                }}
-              />
+              <Heart size={16} style={{ color: isLiked ? "#e05454" : "rgba(255,255,255,0.2)", fill: isLiked ? "#e05454" : "none", transition: "all 0.2s" }} />
             </button>
+
+            {hasVideo && (
+              <button
+                onClick={toggleVideo}
+                className="w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200"
+                style={{
+                  background: videoVisible ? "rgba(196,168,130,0.2)" : "rgba(255,255,255,0.06)",
+                  border: videoVisible ? "1px solid rgba(196,168,130,0.4)" : "1px solid rgba(255,255,255,0.08)",
+                  color: videoVisible ? "#c4a882" : "rgba(255,255,255,0.35)",
+                }}
+              >
+                <Tv2 size={13} />
+              </button>
+            )}
 
             <button onClick={handlePrev} className="text-zinc-600 hover:text-zinc-300 transition-colors">
               <SkipBack size={16} />
@@ -487,7 +474,7 @@ export default function MusicPlayer() {
             >
               {isPlaying
                 ? <Pause size={14} color="#0d0804" />
-                : <Play size={14} color="#0d0804" style={{ marginLeft: 1 }} />
+                : <Play  size={14} color="#0d0804" style={{ marginLeft: 1 }} />
               }
             </button>
 
@@ -495,12 +482,10 @@ export default function MusicPlayer() {
               <SkipForward size={16} />
             </button>
 
-            {/* ── CLOSE button ── */}
             <button
               onClick={(e) => { e.stopPropagation(); setDismissed(true) }}
-              className="w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200 hover:bg-white/8 ml-1"
+              className="w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200 ml-1"
               style={{ color: "rgba(255,255,255,0.2)" }}
-              title="Close player"
             >
               <X size={14} />
             </button>

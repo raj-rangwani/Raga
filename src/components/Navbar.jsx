@@ -1,6 +1,14 @@
 import { useEffect, useRef, useState } from "react"
 import { User } from "lucide-react"
 import { Link } from "react-router-dom"
+// import { Link } from "react-router-dom"
+import { auth } from "../utils/firebase"
+import {
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut,
+  onAuthStateChanged,
+} from "firebase/auth"
 
 function Navbar() {
 
@@ -34,14 +42,57 @@ function Navbar() {
     }
 
   }, [])
+useEffect(() => {
 
-  // Temporary User Data
-  const user = {
-    name: "Raga Listener",
-    email: "ragafan@gmail.com",
-    phone: "+91 9876543210",
-    language: "Urdu / Hindi"
+  const unsubscribe = onAuthStateChanged(
+    auth,
+    (currentUser) => {
+      setUser(currentUser)
+    }
+  )
+
+  return () => unsubscribe()
+
+}, [])
+
+
+
+  const [user, setUser] = useState(null)
+  const handleGoogleLogin = async () => {
+
+  try {
+
+    const provider =
+      new GoogleAuthProvider()
+
+    await signInWithPopup(
+      auth,
+      provider
+    )
+
+  } catch (error) {
+
+    console.error(error)
+
   }
+
+}
+
+const handleLogout = async () => {
+
+  try {
+
+    await signOut(auth)
+
+    setShowProfile(false)
+
+  } catch (error) {
+
+    console.error(error)
+
+  }
+
+}
 
   return (
 
@@ -155,9 +206,16 @@ function Navbar() {
         >
 
           <button
-            onClick={() =>
-              setShowProfile(!showProfile)
-            }
+            onClick={() => {
+
+  if (!user) {
+    handleGoogleLogin()
+    return
+  }
+
+  setShowProfile(!showProfile)
+
+}}
 
             className="
               flex items-center gap-3
@@ -183,7 +241,7 @@ function Navbar() {
               className="text-sm"
               style={{ fontFamily: "Inter" }}
             >
-              {user.name}
+              {user ? user.displayName : "Login"}
             </span>
 
           </button>
@@ -216,7 +274,7 @@ function Navbar() {
                 "
                 style={{ fontFamily: "Playfair Display" }}
               >
-                {user.name}
+                {user?.displayName}
               </h2>
 
               <div
@@ -235,49 +293,42 @@ function Navbar() {
                   <span className="text-zinc-500">
                     Email:
                   </span>{" "}
-                  {user.email}
+                 {user?.email}
                 </p>
 
                 <p>
                   <span className="text-zinc-500">
                     Phone:
                   </span>{" "}
-                  {user.phone}
+                  Coming Soon
                 </p>
 
                 <p>
                   <span className="text-zinc-500">
                     Preferred Language:
                   </span>{" "}
-                  {user.language}
+                  Hindi / Urdu
                 </p>
 
               </div>
 
               <button
-                className="
-                  mt-6
-
-                  w-full
-
-                  bg-amber-100
-
-                  text-black
-
-                  py-3
-
-                  rounded-2xl
-
-                  font-semibold
-
-                  hover:bg-amber-200
-
-                  transition-all
-                  duration-300
-                "
-              >
-                View Profile
-              </button>
+  onClick={handleLogout}
+  className="
+    mt-6
+    w-full
+    bg-red-500
+    text-white
+    py-3
+    rounded-2xl
+    font-semibold
+    hover:bg-red-600
+    transition-all
+    duration-300
+  "
+>
+  Logout
+</button>
 
             </div>
 

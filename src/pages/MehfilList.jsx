@@ -1,257 +1,212 @@
-import { useState } from "react"
+// src/pages/MehfilList.jsx
+import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import Navbar from "../components/Navbar"
-import { Users, Music, Moon, Flame, Wind, CloudRain } from "lucide-react"
+import AmbientEffects from "../components/AmbientEffects"
+import { MEHFILS } from "../data/mehfils"
+import { db } from "../utils/firebase"
+import { collection, onSnapshot, doc } from "firebase/firestore"
+import { Users, Music2, Radio } from "lucide-react"
 
-const mehfils = [
-  {
-    id: "shab-e-tarab",
-    name: "Shab-e-Tarab",
-    urdu: "شبِ طرب",
-    tagline: "Night of ecstasy — where every ghazal is a confession",
-    mood: "Soulful",
-    icon: Moon,
-    color: "#c4a882",
-    glow: "rgba(196,168,130,0.18)",
-    cardBg: "linear-gradient(135deg, #1a1008 0%, #0e0b06 100%)",
-    listeners: 34,
-    queue: 7,
-    nowPlaying: "Aaj Jaane Ki Zid Na Karo — Farida Khanum",
-    tags: ["Ghazal", "Klassik", "Slow"],
-  },
-  {
-    id: "dard-ki-raat",
-    name: "Dard Ki Raat",
-    urdu: "دردکی رات",
-    tagline: "Where grief becomes music and music becomes prayer",
-    mood: "Melancholic",
-    icon: CloudRain,
-    color: "#8ba9c4",
-    glow: "rgba(139,169,196,0.15)",
-    cardBg: "linear-gradient(135deg, #0b0f18 0%, #080a10 100%)",
-    listeners: 21,
-    queue: 4,
-    nowPlaying: "Tum Nahin Aaye — Mehdi Hassan",
-    tags: ["Dard", "Tanha", "Raat"],
-  },
-  {
-    id: "josh-e-rang",
-    name: "Josh-e-Rang",
-    urdu: "جوشِ رنگ",
-    tagline: "Qawwali fire — the room is spinning and no one wants to stop",
-    mood: "Ecstatic",
-    icon: Flame,
-    color: "#c47c5a",
-    glow: "rgba(196,124,90,0.15)",
-    cardBg: "linear-gradient(135deg, #1a0a04 0%, #100604 100%)",
-    listeners: 58,
-    queue: 12,
-    nowPlaying: "Dam Mast Qalandar — Nusrat Fateh Ali Khan",
-    tags: ["Qawwali", "Sufi", "Junoon"],
-  },
-  {
-    id: "sukoon-ka-darya",
-    name: "Sukoon Ka Darya",
-    urdu: "سکون کا دریا",
-    tagline: "Soft instruments, softer evenings. No rush, only presence",
-    mood: "Serene",
-    icon: Wind,
-    color: "#82b89a",
-    glow: "rgba(130,184,154,0.15)",
-    cardBg: "linear-gradient(135deg, #071009 0%, #060908 100%)",
-    listeners: 17,
-    queue: 3,
-    nowPlaying: "Lag Jaa Gale — Lata Mangeshkar",
-    tags: ["Nazm", "Instrumental", "Soothing"],
-  },
-]
+// ── Live listener count from Firestore ───────────────────────
+function useLiveListeners(mehfilId) {
+  const [count, setCount] = useState(0)
+  useEffect(() => {
+    const unsub = onSnapshot(
+      collection(db, "mehfils", mehfilId, "listeners"),
+      snap => setCount(snap.size)
+    )
+    return () => unsub()
+  }, [mehfilId])
+  return count
+}
 
-export default function MehfilList() {
-  const navigate = useNavigate()
-  const [hoveredId, setHoveredId] = useState(null)
+// ── Live now playing from Firestore ──────────────────────────
+function useLiveNowPlaying(mehfilId) {
+  const [song, setSong] = useState(null)
+  useEffect(() => {
+    const unsub = onSnapshot(
+      doc(db, "mehfils", mehfilId, "state", "currentSong"),
+      snap => setSong(snap.exists() ? snap.data() : null)
+    )
+    return () => unsub()
+  }, [mehfilId])
+  return song
+}
+
+// ── Mehfil card ───────────────────────────────────────────────
+function MehfilCard({ mehfil }) {
+  const navigate   = useNavigate()
+  const listeners  = useLiveListeners(mehfil.id)
+  const nowPlaying = useLiveNowPlaying(mehfil.id)
+  const Icon       = mehfil.icon
 
   return (
     <div
-      className="min-h-screen text-white relative overflow-hidden"
+      onClick={() => navigate(`/mehfil/${mehfil.id}`)}
+      className="group relative overflow-hidden rounded-3xl cursor-pointer transition-all duration-500 hover:scale-[1.02]"
       style={{
-        background: "radial-gradient(ellipse at 20% 50%, #1a0f05 0%, #0a0a0a 50%, #050810 100%)",
+        background: mehfil.cardBg,
+        border: `1px solid ${mehfil.color}18`,
+        boxShadow: "0 8px 40px rgba(0,0,0,0.4)",
+        minHeight: 280,
+      }}
+      onMouseEnter={e => {
+        e.currentTarget.style.boxShadow = `0 8px 60px ${mehfil.color}20, 0 0 0 1px ${mehfil.color}30`
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.boxShadow = "0 8px 40px rgba(0,0,0,0.4)"
       }}
     >
-      {/* Subtle texture overlay */}
-      <div
-        className="absolute inset-0 opacity-[0.03]"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-        }}
-      />
+      {/* Hover glow */}
+      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+        style={{ background: `radial-gradient(ellipse at 50% 0%, ${mehfil.color}10 0%, transparent 60%)` }} />
 
-      <Navbar />
+      {/* Live badge */}
+      {listeners > 0 && (
+        <div className="absolute top-4 right-4 flex items-center gap-1.5 px-2.5 py-1 rounded-full z-10"
+          style={{
+            background: "rgba(0,0,0,0.5)",
+            border: "1px solid rgba(255,255,255,0.1)",
+            backdropFilter: "blur(8px)",
+          }}
+        >
+          <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "#ef4444" }} />
+          <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.6)", fontFamily: "Inter" }}>LIVE</span>
+        </div>
+      )}
 
-      <div className="relative z-10 px-8 pt-8 pb-16 max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="mb-14">
-          <p
-            className="text-zinc-500 text-sm tracking-[0.3em] uppercase mb-3"
-            style={{ fontFamily: "Inter" }}
-          >
-            Choose Your Gathering
-          </p>
-          <h1
-            className="text-6xl text-amber-100 leading-tight"
-            style={{ fontFamily: "Playfair Display" }}
-          >
-            Mehfils
-          </h1>
-          <p
-            className="text-zinc-400 mt-4 text-lg max-w-xl leading-relaxed"
-            style={{ fontFamily: "Inter" }}
-          >
-            Each mehfil has its own soul. Enter, request a song, take your place in the queue — and let the music wash over you.
-          </p>
+      <div className="relative z-10 p-7 flex flex-col h-full" style={{ minHeight: 280 }}>
+        {/* Icon + mood */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center"
+            style={{ background: mehfil.color + "15", border: `1px solid ${mehfil.color}25` }}>
+            <Icon size={22} style={{ color: mehfil.color }} />
+          </div>
+          <span className="text-[10px] px-3 py-1 rounded-full tracking-wider uppercase"
+            style={{
+              background: mehfil.color + "12",
+              color: mehfil.color + "90",
+              border: `1px solid ${mehfil.color}18`,
+              fontFamily: "Inter",
+            }}>
+            {mehfil.mood}
+          </span>
         </div>
 
-        {/* Mehfil Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {mehfils.map((m) => {
-            const Icon = m.icon
-            const isHovered = hoveredId === m.id
-            return (
-              <div
-                key={m.id}
-                onMouseEnter={() => setHoveredId(m.id)}
-                onMouseLeave={() => setHoveredId(null)}
-                onClick={() => navigate(`/mehfil/${m.id}`)}
-                className="relative rounded-2xl overflow-hidden cursor-pointer group"
-                style={{
-                  border: `1px solid ${isHovered ? m.color + "40" : "rgba(255,255,255,0.06)"}`,
-                  transition: "all 0.4s ease",
-                  transform: isHovered ? "translateY(-3px)" : "translateY(0)",
-                  boxShadow: isHovered ? `0 20px 60px ${m.glow}` : "none",
-                  background: m.cardBg,
-                }}
-              >
-                {/* Background glow blob */}
-                <div
-                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+        <h2 className="text-2xl text-amber-50 mb-1" style={{ fontFamily: "Playfair Display" }}>
+          {mehfil.name}
+        </h2>
+        <p className="text-sm mb-1" style={{ color: "rgba(255,255,255,0.25)", fontFamily: "serif" }}>
+          {mehfil.urdu}
+        </p>
+        <p className="text-xs leading-relaxed mb-5" style={{ color: "rgba(255,255,255,0.35)", fontFamily: "Inter" }}>
+          {mehfil.tagline}
+        </p>
+
+        {/* Tags */}
+        <div className="flex flex-wrap gap-1.5 mb-5">
+          {mehfil.tags.map(tag => (
+            <span key={tag} className="text-[10px] px-2 py-0.5 rounded-full"
+              style={{
+                background: "rgba(255,255,255,0.05)",
+                color: "rgba(255,255,255,0.3)",
+                border: "1px solid rgba(255,255,255,0.07)",
+                fontFamily: "Inter",
+              }}>
+              {tag}
+            </span>
+          ))}
+        </div>
+
+        {/* Stats + enter */}
+        <div className="mt-auto flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1.5">
+              <Users size={12} style={{ color: mehfil.color + "70" }} />
+              <span className="text-xs" style={{ color: mehfil.color, fontFamily: "Inter" }}>
+                {listeners > 0 ? listeners : mehfil.listeners} listening
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Music2 size={12} style={{ color: "rgba(255,255,255,0.2)" }} />
+              <span className="text-xs" style={{ color: "rgba(255,255,255,0.25)", fontFamily: "Inter" }}>
+                {mehfil.queueCount} in queue
+              </span>
+            </div>
+          </div>
+          <div
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium transition-all duration-300 opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0"
+            style={{ background: mehfil.color, color: "#0a0804", fontFamily: "Inter" }}
+          >
+            <Radio size={11} />
+            Enter
+          </div>
+        </div>
+
+        {/* Now playing strip */}
+        {(nowPlaying?.title || mehfil.nowPlaying) && (
+          <div className="mt-3 pt-3 flex items-center gap-2"
+            style={{ borderTop: `1px solid ${mehfil.color}12` }}>
+            <div className="flex items-end gap-[2px]">
+              {[3,6,4,7,5].map((h,i) => (
+                <div key={i} className="w-[2px] rounded-full"
                   style={{
-                    background: `radial-gradient(ellipse at 10% 50%, ${m.glow} 0%, transparent 60%)`,
-                  }}
-                />
+                    height: listeners > 0 ? `${h}px` : "2px",
+                    background: mehfil.color,
+                    transition: "height 0.3s ease",
+                    animation: listeners > 0
+                      ? `waveBar ${0.5 + i*0.1}s ease-in-out ${i*0.08}s infinite alternate`
+                      : "none",
+                  }} />
+              ))}
+            </div>
+            <p className="text-[11px] truncate" style={{ color: "rgba(255,255,255,0.3)", fontFamily: "Inter" }}>
+              {nowPlaying?.title && nowPlaying.title !== "Waiting for first request..."
+                ? `${nowPlaying.title}${nowPlaying.artist ? ` — ${nowPlaying.artist}` : ""}`
+                : mehfil.nowPlaying}
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
 
-                <div className="relative z-10 p-7">
-                  {/* Top row */}
-                  <div className="flex items-start justify-between mb-5">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="w-10 h-10 rounded-full flex items-center justify-center"
-                        style={{ background: m.color + "20", border: `1px solid ${m.color}30` }}
-                      >
-                        <Icon size={18} style={{ color: m.color }} />
-                      </div>
-                      <div>
-                        <span
-                          className="text-xs tracking-widest uppercase"
-                          style={{ color: m.color, fontFamily: "Inter" }}
-                        >
-                          {m.mood}
-                        </span>
-                      </div>
-                    </div>
-                    {/* Urdu name */}
-                    <span
-                      className="text-zinc-600 text-lg"
-                      style={{ fontFamily: "serif" }}
-                    >
-                      {m.urdu}
-                    </span>
-                  </div>
-
-                  {/* Name & tagline */}
-                  <h2
-                    className="text-3xl text-amber-50 mb-2"
-                    style={{ fontFamily: "Playfair Display" }}
-                  >
-                    {m.name}
-                  </h2>
-                  <p
-                    className="text-zinc-400 text-sm leading-relaxed mb-6"
-                    style={{ fontFamily: "Inter" }}
-                  >
-                    {m.tagline}
-                  </p>
-
-                  {/* Now playing */}
-                  <div
-                    className="rounded-xl px-4 py-3 mb-5"
-                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      <div
-                        className="w-1.5 h-1.5 rounded-full animate-pulse"
-                        style={{ background: m.color }}
-                      />
-                      <span className="text-zinc-500 text-xs tracking-wider uppercase" style={{ fontFamily: "Inter" }}>
-                        Now Playing
-                      </span>
-                    </div>
-                    <p className="text-zinc-300 text-sm" style={{ fontFamily: "Inter" }}>
-                      {m.nowPlaying}
-                    </p>
-                  </div>
-
-                  {/* Tags */}
-                  <div className="flex gap-2 mb-6 flex-wrap">
-                    {m.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="text-xs px-3 py-1 rounded-full"
-                        style={{
-                          background: m.color + "15",
-                          color: m.color,
-                          border: `1px solid ${m.color}25`,
-                          fontFamily: "Inter",
-                        }}
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-
-                  {/* Bottom stats + CTA */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-5">
-                      <div className="flex items-center gap-1.5">
-                        <Users size={14} className="text-zinc-500" />
-                        <span className="text-zinc-400 text-sm" style={{ fontFamily: "Inter" }}>
-                          {m.listeners} listening
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <Music size={14} className="text-zinc-500" />
-                        <span className="text-zinc-400 text-sm" style={{ fontFamily: "Inter" }}>
-                          {m.queue} in queue
-                        </span>
-                      </div>
-                    </div>
-
-                    <button
-                      className="text-sm px-5 py-2 rounded-full font-medium transition-all duration-300"
-                      style={{
-                        background: isHovered ? m.color : "transparent",
-                        color: isHovered ? "#0a0a0a" : m.color,
-                        border: `1px solid ${m.color}`,
-                        fontFamily: "Inter",
-                      }}
-                    >
-                      Enter
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )
-          })}
+// ── Main ──────────────────────────────────────────────────────
+export default function MehfilList() {
+  return (
+    <div className="min-h-screen text-white pb-32 relative overflow-hidden"
+      style={{ background: "linear-gradient(160deg, #0d0905 0%, #080808 50%, #050810 100%)" }}
+    >
+      <AmbientEffects glow glowColor="rgba(196,168,130,0.04)" particles particleColor="rgba(196,168,130," />
+      <div className="relative z-10">
+        <Navbar />
+        <div className="px-6 md:px-10 pt-8 mb-10">
+          <p className="text-xs tracking-[0.3em] uppercase mb-3"
+            style={{ color: "rgba(196,168,130,0.5)", fontFamily: "Inter" }}>
+            Live Rooms
+          </p>
+          <h1 className="text-5xl md:text-6xl text-amber-100 tracking-wide mb-4"
+            style={{ fontFamily: "Playfair Display" }}>
+            Choose Your Mehfil
+          </h1>
+          <p className="text-zinc-500 text-base leading-loose max-w-2xl" style={{ fontFamily: "Inter" }}>
+            Enter a live gathering. Listen together. Send your chitthi and request a song for the ustaad.
+          </p>
+        </div>
+        <div className="px-6 md:px-10 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+          {MEHFILS.map(mehfil => (
+            <MehfilCard key={mehfil.id} mehfil={mehfil} />
+          ))}
         </div>
       </div>
+      <style>{`
+        @keyframes waveBar {
+          from { transform: scaleY(0.3) }
+          to   { transform: scaleY(1) }
+        }
+      `}</style>
     </div>
   )
 }

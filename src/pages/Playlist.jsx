@@ -1,10 +1,23 @@
-import { useState } from "react"
+// src/pages/Playlist.jsx
+import { useState, useCallback } from "react"
 import Navbar from "../components/Navbar"
 import { useMusicPlayer } from "../components/MusicPlayerContext"
 import {
   Play, Pause, Clock, Heart, Shuffle,
-  Music2, ChevronRight, Lock
+  Music2, ChevronRight, Lock, Loader2
 } from "lucide-react"
+
+// ─── YouTube search helper ────────────────────────────────────
+const YT_API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY
+
+async function fetchVideoId(title, artist) {
+  const q = encodeURIComponent(`${title} ${artist} ghazal`)
+  const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=1&q=${q}&key=${YT_API_KEY}`
+  const res = await fetch(url)
+  if (!res.ok) throw new Error("YouTube search failed")
+  const data = await res.json()
+  return data.items?.[0]?.id?.videoId || null
+}
 
 // ─── Data ─────────────────────────────────────────────────────
 const PLAYLISTS = [
@@ -18,11 +31,11 @@ const PLAYLISTS = [
     glow: "rgba(196,168,130,0.12)",
     private: true,
     songs: [
-      { title: "Hoshwalon Ko Khabar Kya", artist: "Jagjit Singh", duration: "5:12", year: "1988", plays: "2.4M" },
+      { title: "Hoshwalon Ko Khabar Kya", artist: "Jagjit Singh",  duration: "5:12", year: "1988", plays: "2.4M" },
       { title: "Tum Itna Jo Muskura Rahe Ho", artist: "Jagjit Singh", duration: "4:26", year: "1981", plays: "3.1M" },
-      { title: "Aaj Jaane Ki Zid Na Karo", artist: "Farida Khanum", duration: "4:48", year: "1977", plays: "5.8M" },
-      { title: "Tum Nahin Aaye", artist: "Mehdi Hassan", duration: "5:33", year: "1972", plays: "1.9M" },
-      { title: "Ranjish Hi Sahi", artist: "Mehdi Hassan", duration: "6:20", year: "1974", plays: "4.1M" },
+      { title: "Aaj Jaane Ki Zid Na Karo",  artist: "Farida Khanum", duration: "4:48", year: "1977", plays: "5.8M" },
+      { title: "Tum Nahin Aaye",            artist: "Mehdi Hassan",  duration: "5:33", year: "1972", plays: "1.9M" },
+      { title: "Ranjish Hi Sahi",           artist: "Mehdi Hassan",  duration: "6:20", year: "1974", plays: "4.1M" },
     ],
   },
   {
@@ -35,11 +48,11 @@ const PLAYLISTS = [
     glow: "rgba(139,169,196,0.12)",
     private: false,
     songs: [
-      { title: "Jhuki Jhuki Si Nazar", artist: "Jagjit Singh", duration: "5:01", year: "1990", plays: "1.8M" },
-      { title: "Chitthi Na Koi Sandesh", artist: "Jagjit Singh", duration: "6:40", year: "1999", plays: "4.2M" },
-      { title: "Lag Jaa Gale", artist: "Lata Mangeshkar", duration: "3:55", year: "1964", plays: "9.1M" },
+      { title: "Jhuki Jhuki Si Nazar",       artist: "Jagjit Singh",        duration: "5:01", year: "1990", plays: "1.8M" },
+      { title: "Chitthi Na Koi Sandesh",     artist: "Jagjit Singh",        duration: "6:40", year: "1999", plays: "4.2M" },
+      { title: "Lag Jaa Gale",               artist: "Lata Mangeshkar",     duration: "3:55", year: "1964", plays: "9.1M" },
       { title: "Yeh Jo Halka Halka Suroor Hai", artist: "Nusrat Fateh Ali Khan", duration: "7:12", year: "1986", plays: "3.3M" },
-      { title: "Dil Dhoondta Hai", artist: "Bhupinder Singh", duration: "5:44", year: "1975", plays: "2.2M" },
+      { title: "Dil Dhoondta Hai",           artist: "Bhupinder Singh",     duration: "5:44", year: "1975", plays: "2.2M" },
     ],
   },
   {
@@ -52,11 +65,11 @@ const PLAYLISTS = [
     glow: "rgba(184,154,106,0.12)",
     private: false,
     songs: [
-      { title: "Koi Fariyaad", artist: "Jagjit Singh", duration: "8:09", year: "2003", plays: "5.7M" },
-      { title: "Dam Mast Qalandar", artist: "Nusrat Fateh Ali Khan", duration: "9:30", year: "1987", plays: "12.4M" },
-      { title: "Yeh Dil Yeh Pagal Dil Mera", artist: "Mehdi Hassan", duration: "5:55", year: "1969", plays: "2.9M" },
-      { title: "Allah Hoo", artist: "Nusrat Fateh Ali Khan", duration: "8:44", year: "1990", plays: "8.7M" },
-      { title: "Abhi Na Jao Chhod Kar", artist: "Asha Bhosle", duration: "3:40", year: "1960", plays: "7.2M" },
+      { title: "Koi Fariyaad",              artist: "Jagjit Singh",          duration: "8:09", year: "2003", plays: "5.7M" },
+      { title: "Dam Mast Qalandar",         artist: "Nusrat Fateh Ali Khan", duration: "9:30", year: "1987", plays: "12.4M" },
+      { title: "Yeh Dil Yeh Pagal Dil Mera", artist: "Mehdi Hassan",        duration: "5:55", year: "1969", plays: "2.9M" },
+      { title: "Allah Hoo",                 artist: "Nusrat Fateh Ali Khan", duration: "8:44", year: "1990", plays: "8.7M" },
+      { title: "Abhi Na Jao Chhod Kar",    artist: "Asha Bhosle",           duration: "3:40", year: "1960", plays: "7.2M" },
     ],
   },
   {
@@ -69,41 +82,42 @@ const PLAYLISTS = [
     glow: "rgba(130,184,154,0.12)",
     private: false,
     songs: [
-      { title: "Mere Rashke Qamar", artist: "Nusrat Fateh Ali Khan", duration: "6:15", year: "1986", plays: "6.8M" },
-      { title: "O Re Piya", artist: "Rahat Fateh Ali Khan", duration: "5:28", year: "2007", plays: "4.5M" },
-      { title: "Mast Qalandar", artist: "Abida Parveen", duration: "11:20", year: "1988", plays: "3.1M" },
-      { title: "Tu Jhoom", artist: "Abida Parveen", duration: "5:02", year: "2022", plays: "2.7M" },
+      { title: "Mere Rashke Qamar",  artist: "Nusrat Fateh Ali Khan", duration: "6:15", year: "1986", plays: "6.8M" },
+      { title: "O Re Piya",         artist: "Rahat Fateh Ali Khan",   duration: "5:28", year: "2007", plays: "4.5M" },
+      { title: "Mast Qalandar",     artist: "Abida Parveen",          duration: "11:20", year: "1988", plays: "3.1M" },
+      { title: "Tu Jhoom",          artist: "Abida Parveen",          duration: "5:02", year: "2022", plays: "2.7M" },
     ],
   },
 ]
 
 // ─── Song row ─────────────────────────────────────────────────
-function SongRow({ song, index, color, onPlay, isCurrentSong, isPlaying }) {
+function SongRow({ song, index, color, onPlay, isCurrentSong, isPlaying, isLoading }) {
   const [hovered, setHovered] = useState(false)
-  const [liked, setLiked] = useState(false)
+  const [liked,   setLiked]   = useState(false)
 
   return (
     <div
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onDoubleClick={onPlay}
-      className="grid items-center px-4 py-3 rounded-xl transition-all duration-200 group cursor-pointer"
+      onDoubleClick={() => { if (!isLoading) onPlay() }}
+      className="grid items-center px-4 py-3 rounded-xl transition-all duration-200 group"
       style={{
         gridTemplateColumns: "32px 1fr 80px 70px 50px",
         gap: "0 16px",
-        background: isCurrentSong
-          ? color + "0e"
-          : hovered ? "rgba(255,255,255,0.04)" : "transparent",
+        background: isCurrentSong ? color + "0e" : hovered ? "rgba(255,255,255,0.04)" : "transparent",
         border: isCurrentSong ? `1px solid ${color}18` : "1px solid transparent",
+        cursor: isLoading ? "wait" : "default",
       }}
     >
-      {/* Index / play */}
+      {/* Index / play / loading */}
       <div className="flex items-center justify-center">
-        {hovered || isCurrentSong ? (
-          <button onClick={onPlay}>
+        {isLoading ? (
+          <Loader2 size={14} className="animate-spin" style={{ color }} />
+        ) : hovered || isCurrentSong ? (
+          <button onClick={() => { if (!isLoading) onPlay() }}>
             {isCurrentSong && isPlaying
               ? <Pause size={14} style={{ color }} />
-              : <Play size={14} style={{ color: isCurrentSong ? color : "rgba(255,255,255,0.7)", marginLeft: 1 }} />
+              : <Play  size={14} style={{ color: isCurrentSong ? color : "rgba(255,255,255,0.7)", marginLeft: 1 }} />
             }
           </button>
         ) : (
@@ -115,10 +129,8 @@ function SongRow({ song, index, color, onPlay, isCurrentSong, isPlaying }) {
 
       {/* Title + artist */}
       <div className="min-w-0">
-        <p
-          className="text-sm truncate font-medium"
-          style={{ color: isCurrentSong ? color : "rgba(255,255,255,0.85)", fontFamily: "Playfair Display" }}
-        >
+        <p className="text-sm truncate font-medium"
+          style={{ color: isCurrentSong ? color : isLoading ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.85)", fontFamily: "Playfair Display" }}>
           {song.title}
         </p>
         <p className="text-xs truncate mt-0.5" style={{ color: "rgba(255,255,255,0.28)", fontFamily: "Inter" }}>
@@ -127,14 +139,10 @@ function SongRow({ song, index, color, onPlay, isCurrentSong, isPlaying }) {
       </div>
 
       {/* Plays */}
-      <p className="text-right text-xs" style={{ color: "rgba(255,255,255,0.22)", fontFamily: "Inter" }}>
-        {song.plays}
-      </p>
+      <p className="text-right text-xs" style={{ color: "rgba(255,255,255,0.22)", fontFamily: "Inter" }}>{song.plays}</p>
 
       {/* Year */}
-      <p className="text-center text-xs" style={{ color: "rgba(255,255,255,0.22)", fontFamily: "Inter" }}>
-        {song.year}
-      </p>
+      <p className="text-center text-xs" style={{ color: "rgba(255,255,255,0.22)", fontFamily: "Inter" }}>{song.year}</p>
 
       {/* Duration + like */}
       <div className="flex items-center justify-end gap-2">
@@ -142,14 +150,9 @@ function SongRow({ song, index, color, onPlay, isCurrentSong, isPlaying }) {
           onClick={e => { e.stopPropagation(); setLiked(l => !l) }}
           className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
         >
-          <Heart
-            size={13}
-            style={{ color: liked ? "#e05454" : "rgba(255,255,255,0.25)", fill: liked ? "#e05454" : "none" }}
-          />
+          <Heart size={13} style={{ color: liked ? "#e05454" : "rgba(255,255,255,0.25)", fill: liked ? "#e05454" : "none" }} />
         </button>
-        <span className="text-xs" style={{ color: "rgba(255,255,255,0.25)", fontFamily: "Inter" }}>
-          {song.duration}
-        </span>
+        <span className="text-xs" style={{ color: "rgba(255,255,255,0.25)", fontFamily: "Inter" }}>{song.duration}</span>
       </div>
     </div>
   )
@@ -158,29 +161,100 @@ function SongRow({ song, index, color, onPlay, isCurrentSong, isPlaying }) {
 // ─── Main ─────────────────────────────────────────────────────
 export default function Playlist() {
   const { playSong, currentSong, isPlaying } = useMusicPlayer()
-  const [activeId, setActiveId] = useState("liked")
+  const [activeId,     setActiveId]     = useState("liked")
+  // videoIdCache: "Title::Artist" → videoId string | "error"
+  const [videoIdCache, setVideoIdCache] = useState({})
+  // Which song is currently being fetched (cacheKey string | null)
+  const [loadingSong,  setLoadingSong]  = useState(null)
 
   const active = PLAYLISTS.find(p => p.id === activeId) || PLAYLISTS[0]
 
-  const handlePlaySong = (song, playlist) => {
-    playSong(
-      { title: song.title, artist: song.artist, duration: song.duration },
-      playlist.songs.map(s => ({ title: s.title, artist: s.artist, duration: s.duration }))
-    )
-  }
+  // ── Fetch a single videoId and update cache ───────────────────
+  const getVideoId = useCallback(async (song) => {
+    const key = `${song.title}::${song.artist}`
+    if (videoIdCache[key] && videoIdCache[key] !== "error") return videoIdCache[key]
+    try {
+      const vid = await fetchVideoId(song.title, song.artist)
+      if (!vid) throw new Error("no result")
+      setVideoIdCache(prev => ({ ...prev, [key]: vid }))
+      return vid
+    } catch {
+      setVideoIdCache(prev => ({ ...prev, [key]: "error" }))
+      return null
+    }
+  }, [videoIdCache])
+
+  // ── Build a full queue — fetches ALL missing videoIds in parallel ─
+  // This ensures next/prev always has a complete queue with real videoIds
+  const buildFullQueue = useCallback(async (songs, currentCache) => {
+    // Fetch all missing IDs in parallel
+    const fetches = songs.map(async (s) => {
+      const key = `${s.title}::${s.artist}`
+      if (currentCache[key] && currentCache[key] !== "error") {
+        return { ...s, videoId: currentCache[key] }
+      }
+      try {
+        const vid = await fetchVideoId(s.title, s.artist)
+        return { ...s, videoId: vid || null }
+      } catch {
+        return { ...s, videoId: null }
+      }
+    })
+    const resolved = await Promise.all(fetches)
+
+    // Update cache with all newly fetched IDs
+    const newEntries = {}
+    resolved.forEach(s => {
+      const key = `${s.title}::${s.artist}`
+      if (s.videoId) newEntries[key] = s.videoId
+      else           newEntries[key] = "error"
+    })
+    setVideoIdCache(prev => ({ ...prev, ...newEntries }))
+
+    // Return only songs that have a videoId — these form the playable queue
+    return resolved
+      .filter(s => s.videoId)
+      .map(s => ({ title: s.title, artist: s.artist, videoId: s.videoId, duration: s.duration }))
+  }, [])
+
+  // ── Play a song from the playlist ────────────────────────────
+  const handlePlaySong = useCallback(async (song, allSongs) => {
+    if (loadingSong) return
+    const cacheKey = `${song.title}::${song.artist}`
+    setLoadingSong(cacheKey)
+
+    try {
+      // 1. Get the clicked song's videoId
+      const videoId = await getVideoId(song)
+      if (!videoId) {
+        console.warn("Playlist: no videoId found for", song.title)
+        return
+      }
+
+      // 2. Build complete queue in parallel (fetch all missing IDs)
+      //    Pass current cache + the just-fetched ID so we don't re-fetch
+      const updatedCache = { ...videoIdCache, [cacheKey]: videoId }
+      const queue = await buildFullQueue(allSongs, updatedCache)
+
+      // 3. Play — context switches track via loadVideoById, no remount
+      playSong(
+        { title: song.title, artist: song.artist, videoId, duration: song.duration },
+        queue
+      )
+    } finally {
+      setLoadingSong(null)
+    }
+  }, [loadingSong, getVideoId, buildFullQueue, videoIdCache, playSong])
 
   const handlePlayAll = () => {
-    if (active.songs.length > 0) handlePlaySong(active.songs[0], active)
+    if (active.songs[0]) handlePlaySong(active.songs[0], active.songs)
   }
 
   return (
-    <div
-      className="min-h-screen text-white pb-32 relative overflow-hidden"
-      style={{ background: "#080605" }}
-    >
-      {/* Page-level ambient glow */}
-      <div
-        className="absolute top-0 left-0 w-[500px] h-[500px] pointer-events-none"
+    <div className="min-h-screen text-white pb-32 relative overflow-hidden" style={{ background: "#080605" }}>
+
+      {/* Ambient glow */}
+      <div className="absolute top-0 left-0 w-[500px] h-[500px] pointer-events-none"
         style={{
           background: `radial-gradient(ellipse at 0% 0%, ${active.glow} 0%, transparent 70%)`,
           filter: "blur(60px)",
@@ -190,30 +264,21 @@ export default function Playlist() {
 
       <Navbar />
 
+      {/* Header */}
       <div className="relative z-10 px-10 pt-10 pb-6">
-        <p
-          className="text-xs tracking-[0.3em] uppercase mb-3"
-          style={{ color: "rgba(196,168,130,0.5)", fontFamily: "Inter" }}
-        >
+        <p className="text-xs tracking-[0.3em] uppercase mb-3"
+          style={{ color: "rgba(196,168,130,0.5)", fontFamily: "Inter" }}>
           Your Library
         </p>
-        <h1
-          className="text-6xl text-amber-100 mb-3"
-          style={{ fontFamily: "Playfair Display" }}
-        >
-          Playlists
-        </h1>
-        <p
-          className="text-zinc-500 text-base max-w-xl leading-relaxed"
-          style={{ fontFamily: "Inter" }}
-        >
+        <h1 className="text-6xl text-amber-100 mb-3" style={{ fontFamily: "Playfair Display" }}>Playlists</h1>
+        <p className="text-zinc-500 text-base max-w-xl leading-relaxed" style={{ fontFamily: "Inter" }}>
           Curated for silence, longing and evenings that refuse to end.
         </p>
       </div>
 
       <div className="relative z-10 grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-0 px-10 pt-2">
 
-        {/* ── Left sidebar: playlist list ── */}
+        {/* ── Left sidebar ── */}
         <div className="flex flex-col gap-2 pr-8 border-r border-white/5">
           {PLAYLISTS.map(pl => (
             <button
@@ -225,113 +290,70 @@ export default function Playlist() {
                 border: `1px solid ${activeId === pl.id ? pl.color + "25" : "transparent"}`,
               }}
             >
-              {/* Color swatch */}
-              <div
-                className="w-12 h-12 rounded-xl flex-shrink-0 flex items-center justify-center"
-                style={{
-                  background: `linear-gradient(135deg, ${pl.color}30, ${pl.color}10)`,
-                  border: `1px solid ${pl.color}20`,
-                }}
-              >
+              <div className="w-12 h-12 rounded-xl flex-shrink-0 flex items-center justify-center"
+                style={{ background: `linear-gradient(135deg, ${pl.color}30, ${pl.color}10)`, border: `1px solid ${pl.color}20` }}>
                 <Music2 size={18} style={{ color: pl.color }} />
               </div>
-
               <div className="flex-1 min-w-0">
-                <p
-                  className="text-sm font-medium truncate transition-colors duration-200"
-                  style={{
-                    color: activeId === pl.id ? pl.color : "rgba(255,255,255,0.75)",
-                    fontFamily: "Playfair Display",
-                  }}
-                >
+                <p className="text-sm font-medium truncate transition-colors duration-200"
+                  style={{ color: activeId === pl.id ? pl.color : "rgba(255,255,255,0.75)", fontFamily: "Playfair Display" }}>
                   {pl.title}
                 </p>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <p className="text-xs truncate" style={{ color: "rgba(255,255,255,0.25)", fontFamily: "Inter" }}>
-                    {pl.subtitle}
-                  </p>
+                  <p className="text-xs truncate" style={{ color: "rgba(255,255,255,0.25)", fontFamily: "Inter" }}>{pl.subtitle}</p>
                   {pl.private && <Lock size={10} style={{ color: "rgba(255,255,255,0.2)", flexShrink: 0 }} />}
                 </div>
               </div>
-
               <div className="flex items-center gap-1 flex-shrink-0">
-                <span className="text-xs" style={{ color: "rgba(255,255,255,0.2)", fontFamily: "Inter" }}>
-                  {pl.count}
-                </span>
-                <ChevronRight
-                  size={14}
+                <span className="text-xs" style={{ color: "rgba(255,255,255,0.2)", fontFamily: "Inter" }}>{pl.count}</span>
+                <ChevronRight size={14}
                   className="transition-transform duration-200 group-hover:translate-x-0.5"
-                  style={{ color: activeId === pl.id ? pl.color : "rgba(255,255,255,0.15)" }}
-                />
+                  style={{ color: activeId === pl.id ? pl.color : "rgba(255,255,255,0.15)" }} />
               </div>
             </button>
           ))}
         </div>
 
-        {/* ── Right: active playlist detail ── */}
+        {/* ── Right: active playlist ── */}
         <div className="pl-8">
           {/* Playlist header */}
           <div className="flex items-end gap-8 mb-8">
-            {/* Art */}
-            <div
-              className="w-44 h-44 rounded-2xl flex-shrink-0 flex items-center justify-center relative overflow-hidden"
+            <div className="w-44 h-44 rounded-2xl flex-shrink-0 flex items-center justify-center relative overflow-hidden"
               style={{
                 background: `linear-gradient(135deg, ${active.color}22, ${active.color}08)`,
                 border: `1px solid ${active.color}20`,
                 boxShadow: `0 20px 60px ${active.glow}`,
-              }}
-            >
-              {/* Decorative concentric rings */}
+              }}>
               {[0.85, 0.65, 0.45].map((r, i) => (
-                <div
-                  key={i}
-                  className="absolute rounded-full"
-                  style={{
-                    width: `${r * 100}%`, height: `${r * 100}%`,
-                    border: `1px solid ${active.color}${i === 0 ? "15" : i === 1 ? "10" : "08"}`,
-                  }}
-                />
+                <div key={i} className="absolute rounded-full"
+                  style={{ width: `${r*100}%`, height: `${r*100}%`, border: `1px solid ${active.color}${i===0?"15":i===1?"10":"08"}` }} />
               ))}
               <Music2 size={42} style={{ color: active.color, opacity: 0.6 }} />
             </div>
 
             <div className="flex-1 min-w-0">
-              <p
-                className="text-xs tracking-[0.25em] uppercase mb-2"
-                style={{ color: active.color, fontFamily: "Inter" }}
-              >
+              <p className="text-xs tracking-[0.25em] uppercase mb-2" style={{ color: active.color, fontFamily: "Inter" }}>
                 {active.subtitle} {active.private && "· Private"}
               </p>
-              <h2
-                className="text-5xl text-amber-50 leading-tight mb-3"
-                style={{ fontFamily: "Playfair Display" }}
-              >
+              <h2 className="text-5xl text-amber-50 leading-tight mb-3" style={{ fontFamily: "Playfair Display" }}>
                 {active.title}
               </h2>
-              <p
-                className="text-zinc-500 text-sm leading-relaxed mb-5 max-w-md"
-                style={{ fontFamily: "Inter" }}
-              >
+              <p className="text-zinc-500 text-sm leading-relaxed mb-5 max-w-md" style={{ fontFamily: "Inter" }}>
                 {active.description}
               </p>
-
-              {/* Actions */}
               <div className="flex items-center gap-3">
                 <button
                   onClick={handlePlayAll}
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-300 hover:scale-105 active:scale-95"
+                  disabled={!!loadingSong}
+                  className="flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-300 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-wait disabled:scale-100"
                   style={{ background: active.color, color: "#0a0804", fontFamily: "Inter" }}
                 >
-                  <Play size={15} style={{ marginLeft: 1 }} />
-                  Play All
+                  {loadingSong ? <Loader2 size={15} className="animate-spin" /> : <Play size={15} style={{ marginLeft: 1 }} />}
+                  {loadingSong ? "Loading…" : "Play All"}
                 </button>
                 <button
                   className="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm transition-all duration-300 hover:bg-white/5"
-                  style={{
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    color: "rgba(255,255,255,0.5)",
-                    fontFamily: "Inter",
-                  }}
+                  style={{ border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)", fontFamily: "Inter" }}
                 >
                   <Shuffle size={14} />
                   Shuffle
@@ -345,46 +367,42 @@ export default function Playlist() {
 
           {/* Song list */}
           <div>
-            {/* Column headers */}
-            <div
-              className="grid px-4 mb-2 text-[10px] tracking-[0.2em] uppercase"
-              style={{
-                gridTemplateColumns: "32px 1fr 80px 70px 50px",
-                gap: "0 16px",
-                color: "rgba(255,255,255,0.18)",
-                fontFamily: "Inter",
-              }}
-            >
+            <div className="grid px-4 mb-2 text-[10px] tracking-[0.2em] uppercase"
+              style={{ gridTemplateColumns: "32px 1fr 80px 70px 50px", gap: "0 16px", color: "rgba(255,255,255,0.18)", fontFamily: "Inter" }}>
               <span className="text-center">#</span>
               <span>Title</span>
               <span className="text-right">Plays</span>
               <span className="text-center">Year</span>
               <span className="flex items-center justify-end gap-1"><Clock size={11} /></span>
             </div>
-
             <div className="w-full mb-3" style={{ height: "1px", background: "rgba(255,255,255,0.04)" }} />
 
             <div className="flex flex-col gap-0.5">
-              {active.songs.map((song, idx) => (
-                <SongRow
-                  key={song.title}
-                  song={song}
-                  index={idx}
-                  color={active.color}
-                  onPlay={() => handlePlaySong(song, active)}
-                  isCurrentSong={currentSong?.title === song.title}
-                  isPlaying={isPlaying}
-                />
-              ))}
+              {active.songs.map((song, idx) => {
+                const cacheKey    = `${song.title}::${song.artist}`
+                const cachedId    = videoIdCache[cacheKey]
+                const isCurrentSong = (cachedId && cachedId !== "error")
+                  ? currentSong?.videoId === cachedId
+                  : currentSong?.title === song.title
+
+                return (
+                  <SongRow
+                    key={song.title}
+                    song={song}
+                    index={idx}
+                    color={active.color}
+                    onPlay={() => handlePlaySong(song, active.songs)}
+                    isCurrentSong={isCurrentSong}
+                    isPlaying={isPlaying}
+                    isLoading={loadingSong === cacheKey}
+                  />
+                )
+              })}
             </div>
 
-            {/* Footer count */}
-            <div
-              className="mt-8 px-4 text-xs"
-              style={{ color: "rgba(255,255,255,0.15)", fontFamily: "Inter" }}
-            >
+            <div className="mt-8 px-4 text-xs" style={{ color: "rgba(255,255,255,0.15)", fontFamily: "Inter" }}>
               Showing {active.songs.length} of {active.count} songs
-              <span className="ml-2 opacity-60">· Double-click to play</span>
+              <span className="ml-2 opacity-60">· Click play or double-click to play</span>
             </div>
           </div>
         </div>
