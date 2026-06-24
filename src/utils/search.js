@@ -1,8 +1,6 @@
 // src/utils/search.js
 // Fuzzy search engine for Raga — searches artists, songs, playlists
 
-import { ARTISTS } from "../data/artists"
-import { SONGS } from "../data/songs"
 import { PLAYLISTS } from "../data/playlists"
 
 // ── Fuzzy score: how well does query match target string ──────
@@ -32,11 +30,11 @@ function bestScore(query, fields) {
 }
 
 // ── Main search function ──────────────────────────────────────
-export function search(query, { limit = 10 } = {}) {
+export function search(query, artists = [], songs = [], { limit = 10 } = {}) {
   if (!query || query.trim().length < 1) return { artists: [], songs: [], playlists: [] }
   const q = query.trim()
 
-  const artists = ARTISTS
+  const artistsResults = artists
     .map(a => ({
       ...a,
       _score: bestScore(q, [a.name, a.title, ...(a.tags || [])]),
@@ -46,7 +44,7 @@ export function search(query, { limit = 10 } = {}) {
     .sort((a, b) => b._score - a._score)
     .slice(0, limit)
 
-  const songs = SONGS
+  const songsResults = songs
     .map(s => ({
       ...s,
       _score: bestScore(q, [s.title, s.artist, s.album, ...(s.tags || []), ...(s.genre || [])]),
@@ -56,7 +54,7 @@ export function search(query, { limit = 10 } = {}) {
     .sort((a, b) => b._score - a._score)
     .slice(0, limit)
 
-  const playlists = PLAYLISTS
+  const playlistsResults = PLAYLISTS
     .map(p => ({
       ...p,
       _score: bestScore(q, [p.title, p.subtitle, p.description]),
@@ -66,17 +64,17 @@ export function search(query, { limit = 10 } = {}) {
     .sort((a, b) => b._score - a._score)
     .slice(0, limit)
 
-  return { artists, songs, playlists }
+  return { artists: artistsResults, songs: songsResults, playlists: playlistsResults }
 }
 
 // ── Quick top-5 suggestions for dropdown ─────────────────────
-export function getSuggestions(query) {
+export function getSuggestions(query, artists = [], songs = []) {
   if (!query || query.trim().length < 1) return []
-  const { artists, songs, playlists } = search(query, { limit: 3 })
+  const { artists: arts, songs: sngs, playlists } = search(query, artists, songs, { limit: 3 })
 
   const results = [
-    ...artists.map(a => ({ type: "artist", label: a.name, sub: a.title, id: a.id, score: a._score })),
-    ...songs.map(s => ({ type: "song", label: s.title, sub: s.artist, id: s.id, score: s._score })),
+    ...arts.map(a => ({ type: "artist", label: a.name, sub: a.title, id: a.id, score: a._score })),
+    ...sngs.map(s => ({ type: "song", label: s.title, sub: s.artist, id: s.id, score: s._score })),
     ...playlists.map(p => ({ type: "playlist", label: p.title, sub: p.subtitle, id: p.id, score: p._score })),
   ]
     .sort((a, b) => b.score - a.score)

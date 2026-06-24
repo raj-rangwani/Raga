@@ -4,7 +4,7 @@ import { useState } from "react"
 import Navbar from "../components/Navbar"
 import AmbientEffects, { SongWave } from "../components/AmbientEffects"
 import { useMusicPlayer } from "../components/MusicPlayerContext"
-import { getArtistById } from "../data/artists"
+import { useArtists } from "../context/DataContext"
 import { useArtistTracks } from "../utils/useArtistTracks"
 import {
   Play, Pause, Clock, Heart, Shuffle,
@@ -194,11 +194,23 @@ export default function ArtistDetail() {
   const navigate     = useNavigate()
   const { playSong, currentSong, isPlaying } = useMusicPlayer()
 
+  const { getArtistById, loading: artistLoading } = useArtists()
   const artist = getArtistById(artistId)
   const { tracks, loading, error, source } = useArtistTracks(artistId, artist?.name)
 
   const [activeTab,  setActiveTab]  = useState("tracks")
   const [likedSongs, setLikedSongs] = useState(new Set())
+
+  if (artistLoading) {
+    return (
+      <div className="min-h-screen flex flex-col" style={{ background: "#080605" }}>
+        <Navbar />
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 size={32} className="animate-spin text-amber-100/50" />
+        </div>
+      </div>
+    )
+  }
 
   if (!artist) {
     return (

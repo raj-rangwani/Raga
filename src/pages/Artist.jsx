@@ -8,7 +8,7 @@ import { Link } from "react-router-dom"
 import Navbar from "../components/Navbar"
 import AmbientEffects, { EqualizerBars } from "../components/AmbientEffects"
 import { useMusicPlayer } from "../components/MusicPlayerContext"
-import { ARTISTS, FEATURED_ARTISTS, searchArtists } from "../data/artists"
+import { useArtists } from "../context/DataContext"
 import { Users, Music2, Search, X, TrendingUp } from "lucide-react"
 
 // ── Genre pills ───────────────────────────────────────────────
@@ -148,13 +148,15 @@ export default function Artist() {
   const [isFocused,   setIsFocused]   = useState(false)
   const inputRef = useRef(null)
 
+  const { artists, featuredArtists, searchArtists, loading } = useArtists()
+
   const isSearching = query.trim().length > 0
 
   // Which artists to show
   const displayed = useMemo(() => {
     if (!isSearching) {
       // No search — show featured 8 filtered by genre only
-      return FEATURED_ARTISTS.filter(a =>
+      return featuredArtists.filter(a =>
         activeGenre === "All" || a.tags.some(t => t.toLowerCase() === activeGenre.toLowerCase())
       )
     }
@@ -163,7 +165,7 @@ export default function Artist() {
     return activeGenre === "All"
       ? results
       : results.filter(a => a.tags.some(t => t.toLowerCase() === activeGenre.toLowerCase()))
-  }, [query, activeGenre, isSearching])
+  }, [query, activeGenre, isSearching, featuredArtists, searchArtists])
 
   const clearSearch = () => { setQuery(""); inputRef.current?.focus() }
 
@@ -177,7 +179,13 @@ export default function Artist() {
       <div className="relative z-10">
         <Navbar />
 
-        {/* ── Header ── */}
+        {loading ? (
+          <div className="flex items-center justify-center min-h-[50vh]">
+            <div className="w-8 h-8 border-2 border-amber-100/20 border-t-amber-100/80 rounded-full animate-spin" />
+          </div>
+        ) : (
+          <>
+            {/* ── Header ── */}
         <div className="px-6 md:px-10 pt-8 mb-10">
           <p className="text-xs tracking-[0.3em] uppercase mb-3" style={{ color: "rgba(196,168,130,0.5)", fontFamily: "Inter" }}>
             Discover
@@ -285,7 +293,7 @@ export default function Artist() {
           </div>
           <span className="text-xs text-zinc-700" style={{ fontFamily: "Inter" }}>
             {isSearching
-              ? `${ARTISTS.length} total artists in library`
+              ? `${artists.length} total artists in library`
               : "Search to discover 12 more"
             }
           </span>
@@ -339,6 +347,8 @@ export default function Artist() {
               {" and more — search to find them"}
             </p>
           </div>
+        )}
+        </>
         )}
       </div>
 

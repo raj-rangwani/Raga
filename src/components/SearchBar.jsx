@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom"
 import { Search, X, Music2, User, ListMusic, TrendingUp } from "lucide-react"
 import { getSuggestions } from "../utils/search"
 import { useMusicPlayer } from "./MusicPlayerContext"
+import { useData } from "../context/DataContext"
 import { searchSong } from "../utils/youtube"
 
 const TYPE_CONFIG = {
@@ -32,16 +33,17 @@ export default function SearchBar({
   const containerRef = useRef(null)
   const navigate     = useNavigate()
   const { playSong } = useMusicPlayer()
+  const { artists, songs } = useData()
 
   // Debounced suggestions
   useEffect(() => {
     if (!query.trim()) { setSuggestions([]); setActiveIdx(-1); return }
     const t = setTimeout(() => {
-      setSuggestions(getSuggestions(query))
+      setSuggestions(getSuggestions(query, artists, songs))
       setActiveIdx(-1)
     }, 120)
     return () => clearTimeout(t)
-  }, [query])
+  }, [query, artists, songs])
 
   // Click outside closes dropdown
   useEffect(() => {

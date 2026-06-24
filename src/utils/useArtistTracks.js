@@ -3,22 +3,23 @@
 // Falls back to static songs.js data if API key is missing or quota hit
 
 import { useState, useEffect } from "react"
-import { getSongsByArtist } from "../data/songs"
+import { useSongs } from "../context/DataContext"
 import { searchArtistTopTracks, enrichSongsWithYouTube } from "./youtube"
 
 const API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY
 
 export function useArtistTracks(artistId, artistName) {
   const [tracks, setTracks]   = useState([])
-  const [loading, setLoading] = useState(true)
+  const [localLoading, setLocalLoading] = useState(true)
   const [error, setError]     = useState(null)
   const [source, setSource]   = useState("static") // "static" | "youtube" | "enriched"
+  const { getSongsByArtist, loading: dataLoading } = useSongs()
 
   useEffect(() => {
-    if (!artistId || !artistName) return
+    if (!artistId || !artistName || dataLoading) return
 
     let cancelled = false
-    setLoading(true)
+    setLocalLoading(true)
     setError(null)
 
     // Always load static songs immediately (instant, no flicker)
@@ -30,7 +31,7 @@ export function useArtistTracks(artistId, artistName) {
 
     // If no API key, stop here — static data is good enough
     if (!API_KEY || API_KEY === "undefined") {
-      setLoading(false)
+      setLocalLoading(false)
       return
     }
 
@@ -69,7 +70,7 @@ export function useArtistTracks(artistId, artistName) {
         })
         setTracks(merged)
         setSource("youtube")
-        setLoading(false)
+        setLocalLoading(false)
         return
       }
 
@@ -77,23 +78,23 @@ export function useArtistTracks(artistId, artistName) {
       if (enrichedResult.status === "fulfilled" && enrichedResult.value?.length > 0) {
         setTracks(enrichedResult.value)
         setSource("enriched")
-        setLoading(false)
+        setLocalLoading(false)
         return
       }
 
       // Both failed — static data already set, just stop loading
-      setLoading(false)
+      setLocalLoading(false)
     }).catch(err => {
       if (!cancelled) {
         setError(err.message)
-        setLoading(false)
+        setLocalLoading(false)
       }
     })
 
     return () => { cancelled = true }
-  }, [artistId, artistName])
+  }, [artistId, artistName, dataLoading, getSongsByArtist])
 
-  return { tracks, loading, error, source }
+  return { tracks, loading: dataLoading || localLoading, error, source }
 }
 
 // Clean YouTube video title: remove " - Official Video", artist name prefix etc.

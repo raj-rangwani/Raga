@@ -1,20 +1,22 @@
 // src/components/MusicPlayerContext.jsx
 import { createContext, useContext, useState, useRef, useCallback } from "react"
-import { SONGS } from "../data/songs"
+import { useSongs } from "../context/DataContext"
 
 const MusicPlayerContext = createContext(null)
 export const useMusicPlayer = () => useContext(MusicPlayerContext)
 
-function getLyrics(title) {
-  if (!title) return []
-  const match = SONGS.find(s =>
-    s.title.toLowerCase() === title.toLowerCase() ||
-    title.toLowerCase().includes(s.title.toLowerCase().slice(0, 12))
-  )
-  return match?.lyrics || []
-}
-
 export function MusicPlayerProvider({ children }) {
+  const { songs } = useSongs()
+
+  function getLyrics(title) {
+    if (!title || !songs) return []
+    const match = songs.find(s =>
+      s.title.toLowerCase() === title.toLowerCase() ||
+      title.toLowerCase().includes(s.title.toLowerCase().slice(0, 12))
+    )
+    return match?.lyrics || []
+  }
+
   const [currentSong,  setCurrentSong]   = useState(null)
   const [isPlaying,    setIsPlayingState] = useState(false)
   const [elapsed,      setElapsed]        = useState(0)
