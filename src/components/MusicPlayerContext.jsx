@@ -21,7 +21,7 @@ export function MusicPlayerProvider({ children }) {
   const [isPlaying,    setIsPlayingState] = useState(false)
   const [elapsed,      setElapsed]        = useState(0)
   const [progress,     setProgress]       = useState(0)
-  const [liked,        setLiked]          = useState(new Set())
+  const [liked,        setLiked]          = useState({})
   const [queue,        setQueue]          = useState([])
   const [queueIndex,   setQueueIndex]     = useState(0)
   const [volume,       setVolumeState]    = useState(80)
@@ -167,10 +167,13 @@ export function MusicPlayerProvider({ children }) {
     } catch {}
   }, [])
 
-  const toggleLike = useCallback((title) => {
+  const toggleLike = useCallback((song) => {
+    if (!song || !song.title) return
+    const key = `${song.title}::${song.artist}`
     setLiked(prev => {
-      const next = new Set(prev)
-      next.has(title) ? next.delete(title) : next.add(title)
+      const next = { ...prev }
+      if (next[key]) delete next[key]
+      else next[key] = song
       return next
     })
   }, [])

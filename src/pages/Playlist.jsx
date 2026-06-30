@@ -91,9 +91,8 @@ const PLAYLISTS = [
 ]
 
 // ─── Song row ─────────────────────────────────────────────────
-function SongRow({ song, index, color, onPlay, isCurrentSong, isPlaying, isLoading }) {
+function SongRow({ song, index, color, onPlay, isCurrentSong, isPlaying, isLoading, isLiked, onLike }) {
   const [hovered, setHovered] = useState(false)
-  const [liked,   setLiked]   = useState(false)
 
   return (
     <div
@@ -147,10 +146,10 @@ function SongRow({ song, index, color, onPlay, isCurrentSong, isPlaying, isLoadi
       {/* Duration + like */}
       <div className="flex items-center justify-end gap-2">
         <button
-          onClick={e => { e.stopPropagation(); setLiked(l => !l) }}
+          onClick={e => { e.stopPropagation(); onLike(song) }}
           className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
         >
-          <Heart size={13} style={{ color: liked ? "#e05454" : "rgba(255,255,255,0.25)", fill: liked ? "#e05454" : "none" }} />
+          <Heart size={13} style={{ color: isLiked ? "#e05454" : "rgba(255,255,255,0.25)", fill: isLiked ? "#e05454" : "none" }} />
         </button>
         <span className="text-xs" style={{ color: "rgba(255,255,255,0.25)", fontFamily: "Inter" }}>{song.duration}</span>
       </div>
@@ -160,14 +159,17 @@ function SongRow({ song, index, color, onPlay, isCurrentSong, isPlaying, isLoadi
 
 // ─── Main ─────────────────────────────────────────────────────
 export default function Playlist() {
-  const { playSong, currentSong, isPlaying } = useMusicPlayer()
+  const { playSong, currentSong, isPlaying, liked, toggleLike } = useMusicPlayer()
   const [activeId,     setActiveId]     = useState("liked")
   // videoIdCache: "Title::Artist" → videoId string | "error"
   const [videoIdCache, setVideoIdCache] = useState({})
   // Which song is currently being fetched (cacheKey string | null)
   const [loadingSong,  setLoadingSong]  = useState(null)
 
-  const active = PLAYLISTS.find(p => p.id === activeId) || PLAYLISTS[0]
+  const baseActive = PLAYLISTS.find(p => p.id === activeId) || PLAYLISTS[0]
+  const active = activeId === "liked" 
+    ? { ...baseActive, songs: Object.values(liked), count: Object.keys(liked).length }
+    : baseActive
 
   // ── Fetch a single videoId and update cache ───────────────────
   const getVideoId = useCallback(async (song) => {
@@ -395,6 +397,8 @@ export default function Playlist() {
                     isCurrentSong={isCurrentSong}
                     isPlaying={isPlaying}
                     isLoading={loadingSong === cacheKey}
+                    isLiked={!!liked[cacheKey]}
+                    onLike={toggleLike}
                   />
                 )
               })}

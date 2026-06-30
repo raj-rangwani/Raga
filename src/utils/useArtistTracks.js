@@ -29,7 +29,7 @@ export function useArtistTracks(artistId, artistName) {
       setSource("static")
     }
 
-    // If no API key, stop here — static data is good enough
+    // If no API key, stop here. Rows without videoId are visible but not playable.
     if (!API_KEY || API_KEY === "undefined") {
       setLocalLoading(false)
       return
@@ -75,7 +75,10 @@ export function useArtistTracks(artistId, artistName) {
       }
 
       // Strategy 2: use enriched static songs (has videoIds now)
-      if (enrichedResult.status === "fulfilled" && enrichedResult.value?.length > 0) {
+      if (
+        enrichedResult.status === "fulfilled" &&
+        enrichedResult.value?.some(song => song.videoId)
+      ) {
         setTracks(enrichedResult.value)
         setSource("enriched")
         setLocalLoading(false)
@@ -83,6 +86,15 @@ export function useArtistTracks(artistId, artistName) {
       }
 
       // Both failed — static data already set, just stop loading
+      const apiError =
+        freshResult.status === "rejected"
+          ? freshResult.reason?.message
+          : enrichedResult.status === "rejected"
+            ? enrichedResult.reason?.message
+            : "No playable videos found"
+
+      setError(apiError)
+      setSource("static")
       setLocalLoading(false)
     }).catch(err => {
       if (!cancelled) {
@@ -98,7 +110,7 @@ export function useArtistTracks(artistId, artistName) {
 }
 
 // Clean YouTube video title: remove " - Official Video", artist name prefix etc.
-function cleanYTTitle(ytTitle, artistName) {
+export function cleanYTTitle(ytTitle, artistName) {
   return ytTitle
     .replace(new RegExp(`^${artistName}\\s*[-–|]\\s*`, "i"), "")
     .replace(/\s*[-–|]\s*(official|full|video|audio|hd|lyrics?|ghazal).*/i, "")

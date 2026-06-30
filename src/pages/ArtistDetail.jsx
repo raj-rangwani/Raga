@@ -152,7 +152,7 @@ function SongRow({ song, index, color, onPlay, isCurrent, isPlaying, onLike, isL
       {/* Like + duration */}
       <div className="flex items-center justify-end gap-2">
         <button
-          onClick={e => { e.stopPropagation(); onLike(song.id) }}
+          onClick={e => { e.stopPropagation(); onLike(song) }}
           className="opacity-0 group-hover:opacity-100 transition-opacity duration-150"
         >
           <Heart size={12} style={{
@@ -192,14 +192,14 @@ function SkeletonRow() {
 export default function ArtistDetail() {
   const { artistId } = useParams()
   const navigate     = useNavigate()
-  const { playSong, currentSong, isPlaying } = useMusicPlayer()
+  const { playSong, currentSong, isPlaying, liked, toggleLike } = useMusicPlayer()
 
   const { getArtistById, loading: artistLoading } = useArtists()
   const artist = getArtistById(artistId)
   const { tracks, loading, error, source } = useArtistTracks(artistId, artist?.name)
 
   const [activeTab,  setActiveTab]  = useState("tracks")
-  const [likedSongs, setLikedSongs] = useState(new Set())
+
 
   if (artistLoading) {
     return (
@@ -239,7 +239,7 @@ export default function ArtistDetail() {
         thumbnail:   song.thumbnail,
         duration:    song.duration,
         durationSec: song.durationSec,
-        lyrics:      song.lyrics || [],   // ← pass lyrics through
+        lyrics:      song.lyrics || [],
       },
       tracks
         .filter(s => s.videoId)
@@ -247,7 +247,7 @@ export default function ArtistDetail() {
           title: s.title, artist: artist.name,
           videoId: s.videoId, thumbnail: s.thumbnail,
           duration: s.duration, durationSec: s.durationSec,
-          lyrics: s.lyrics || [],         // ← also in queue
+          lyrics: s.lyrics || [],
         }))
     )
   }
@@ -257,13 +257,7 @@ export default function ArtistDetail() {
     if (first) handlePlay(first)
   }
 
-  const toggleLike = (id) => {
-    setLikedSongs(prev => {
-      const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
-      return next
-    })
-  }
+
 
   const isCurrent = (song) => currentSong?.videoId === song.videoId && !!song.videoId
 
@@ -435,7 +429,7 @@ export default function ArtistDetail() {
                     isCurrent={isCurrent(song)}
                     isPlaying={isPlaying}
                     onLike={toggleLike}
-                    isLiked={likedSongs.has(song.id)}
+                    isLiked={!!liked[`${song.title}::${song.artist}`]}
                   />
                 ))
             }

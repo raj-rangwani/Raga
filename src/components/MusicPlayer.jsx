@@ -138,7 +138,7 @@ export default function MusicPlayer() {
 
   useEffect(() => { if (currentSong) setDismissed(false) }, [currentSong])
 
-  const isLiked  = liked.has(currentSong?.title)
+  const isLiked  = !!liked[`${currentSong?.title}::${currentSong?.artist}`]
   const lyrics   = songData?.lyrics || null
   const hasVideo = !!currentSong?.videoId
 
@@ -317,7 +317,7 @@ export default function MusicPlayer() {
                 </>
               )}
             </div>
-            <button onClick={() => toggleLike(currentSong.title)} className="ml-4 flex-shrink-0">
+            <button onClick={() => toggleLike(currentSong)} className="ml-4 flex-shrink-0">
               <Heart size={22} style={{ color: isLiked ? "#e05454" : "rgba(255,255,255,0.25)", fill: isLiked ? "#e05454" : "none", transition: "all 0.25s" }} />
             </button>
           </div>
@@ -445,7 +445,7 @@ export default function MusicPlayer() {
 
           {/* Mini controls */}
           <div className="flex items-center gap-2 flex-shrink-0" onClick={e => e.stopPropagation()}>
-            <button onClick={() => toggleLike(currentSong.title)}>
+            <button onClick={() => toggleLike(currentSong)}>
               <Heart size={16} style={{ color: isLiked ? "#e05454" : "rgba(255,255,255,0.2)", fill: isLiked ? "#e05454" : "none", transition: "all 0.2s" }} />
             </button>
 

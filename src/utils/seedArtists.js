@@ -6,7 +6,7 @@ import { db } from "./firebase"
 import { doc, setDoc } from "firebase/firestore"
 
 // ── All artist data (moved from data/artists.js for seeding) ──
-const ALL_ARTISTS = [
+export const ALL_ARTISTS = [
   // ── FEATURED (8 cards always visible) ────────────────────────
   {
     id: "jagjit-singh",
