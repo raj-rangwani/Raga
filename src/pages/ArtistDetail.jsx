@@ -192,7 +192,7 @@ function SkeletonRow() {
 export default function ArtistDetail() {
   const { artistId } = useParams()
   const navigate     = useNavigate()
-  const { playSong, currentSong, isPlaying, liked, toggleLike } = useMusicPlayer()
+  const { playSong, currentSong, isPlaying, playlists, openPlaylistPopup } = useMusicPlayer()
 
   const { getArtistById, loading: artistLoading } = useArtists()
   const artist = getArtistById(artistId)
@@ -428,8 +428,8 @@ export default function ArtistDetail() {
                     onPlay={() => handlePlay(song)}
                     isCurrent={isCurrent(song)}
                     isPlaying={isPlaying}
-                    onLike={toggleLike}
-                    isLiked={!!liked[`${song.title}::${song.artist}`]}
+                    onLike={openPlaylistPopup}
+                    isLiked={playlists.some(pl => pl.songs.some(s => s.title === song.title))}
                   />
                 ))
             }

@@ -1,6 +1,71 @@
 // src/components/MusicPlayerContext.jsx
-import { createContext, useContext, useState, useRef, useCallback } from "react"
+import { createContext, useContext, useState, useRef, useCallback, useEffect } from "react"
 import { useSongs } from "../context/DataContext"
+import PlaylistSelectionPopup from "./PlaylistSelectionPopup"
+
+const INITIAL_PLAYLISTS = [
+  {
+    id: "liked",
+    title: "Liked Songs",
+    subtitle: "Personal Collection",
+    description: "The songs that stayed long after the night ended. Each one a chapter.",
+    count: 0,
+    color: "#c4a882",
+    glow: "rgba(196,168,130,0.12)",
+    private: true,
+    songs: [],
+  },
+  {
+    id: "midnight-rain",
+    title: "Midnight Rain",
+    subtitle: "Quiet Nights",
+    description: "Soft ghazals for rain, silence and late thoughts. Best heard alone.",
+    count: 18,
+    color: "#8ba9c4",
+    glow: "rgba(139,169,196,0.12)",
+    private: false,
+    songs: [
+      { title: "Jhuki Jhuki Si Nazar",       artist: "Jagjit Singh",        duration: "5:01", year: "1990", plays: "1.8M" },
+      { title: "Chitthi Na Koi Sandesh",     artist: "Jagjit Singh",        duration: "6:40", year: "1999", plays: "4.2M" },
+      { title: "Lag Jaa Gale",               artist: "Lata Mangeshkar",     duration: "3:55", year: "1964", plays: "9.1M" },
+      { title: "Yeh Jo Halka Halka Suroor Hai", artist: "Nusrat Fateh Ali Khan", duration: "7:12", year: "1986", plays: "3.3M" },
+      { title: "Dil Dhoondta Hai",           artist: "Bhupinder Singh",     duration: "5:44", year: "1975", plays: "2.2M" },
+    ],
+  },
+  {
+    id: "mehfil-nights",
+    title: "Mehfil Nights",
+    subtitle: "Classic Mehfils",
+    description: "Timeless voices gathered for long poetic evenings. No clock, no hurry.",
+    count: 26,
+    color: "#b89a6a",
+    glow: "rgba(184,154,106,0.12)",
+    private: false,
+    songs: [
+      { title: "Koi Fariyaad",              artist: "Jagjit Singh",          duration: "8:09", year: "2003", plays: "5.7M" },
+      { title: "Dam Mast Qalandar",         artist: "Nusrat Fateh Ali Khan", duration: "9:30", year: "1987", plays: "12.4M" },
+      { title: "Yeh Dil Yeh Pagal Dil Mera", artist: "Mehdi Hassan",        duration: "5:55", year: "1969", plays: "2.9M" },
+      { title: "Allah Hoo",                 artist: "Nusrat Fateh Ali Khan", duration: "8:44", year: "1990", plays: "8.7M" },
+      { title: "Abhi Na Jao Chhod Kar",    artist: "Asha Bhosle",           duration: "3:40", year: "1960", plays: "7.2M" },
+    ],
+  },
+  {
+    id: "sufi-silence",
+    title: "Sufi Silence",
+    subtitle: "Spiritual Calm",
+    description: "Poetry that feels like prayer and stillness that fills an empty room.",
+    count: 14,
+    color: "#82b89a",
+    glow: "rgba(130,184,154,0.12)",
+    private: false,
+    songs: [
+      { title: "Mere Rashke Qamar",  artist: "Nusrat Fateh Ali Khan", duration: "6:15", year: "1986", plays: "6.8M" },
+      { title: "O Re Piya",         artist: "Rahat Fateh Ali Khan",   duration: "5:28", year: "2007", plays: "4.5M" },
+      { title: "Mast Qalandar",     artist: "Abida Parveen",          duration: "11:20", year: "1988", plays: "3.1M" },
+      { title: "Tu Jhoom",          artist: "Abida Parveen",          duration: "5:02", year: "2022", plays: "2.7M" },
+    ],
+  },
+]
 
 const MusicPlayerContext = createContext(null)
 export const useMusicPlayer = () => useContext(MusicPlayerContext)
@@ -17,21 +82,40 @@ export function MusicPlayerProvider({ children }) {
     return match?.lyrics || []
   }
 
-  const [currentSong,  setCurrentSong]   = useState(null)
+  const [currentSong,  setCurrentSong]    = useState(null)
   const [isPlaying,    setIsPlayingState] = useState(false)
   const [elapsed,      setElapsed]        = useState(0)
   const [progress,     setProgress]       = useState(0)
-  const [liked,        setLiked]          = useState({})
+  const [playlists,    setPlaylists]      = useState(() => {
+    try {
+      const saved = localStorage.getItem("raga_playlists")
+      if (saved) return JSON.parse(saved)
+    } catch (e) {
+      console.warn("Failed to load playlists", e)
+    }
+    return INITIAL_PLAYLISTS
+  })
   const [queue,        setQueue]          = useState([])
   const [queueIndex,   setQueueIndex]     = useState(0)
   const [volume,       setVolumeState]    = useState(80)
   const [videoVisible, setVideoVisible]   = useState(false)
+  const [repeat,       setRepeatState]    = useState(false)
 
   // Single YT player instance — registered by YouTubePlayer.jsx on onReady
   const ytPlayerRef   = useRef(null)
   const tickRef       = useRef(null)
   const handleNextRef = useRef(null)
   const isPlayingRef  = useRef(false)
+  const repeatRef     = useRef(false)
+
+  // ── Persistence ──────────────────────────────────────────────
+  useEffect(() => {
+    try {
+      localStorage.setItem("raga_playlists", JSON.stringify(playlists))
+    } catch (e) {
+      console.warn("Failed to save playlists", e)
+    }
+  }, [playlists])
 
   // ── Tick ─────────────────────────────────────────────────────
   function startTick() {
@@ -61,10 +145,17 @@ export function MusicPlayerProvider({ children }) {
       stopTick()
     }
     if (ytState === S.ENDED) {
-      isPlayingRef.current = false
-      setIsPlayingState(false)
-      stopTick()
-      handleNextRef.current?.()
+      if (repeatRef.current) {
+        try {
+          ytPlayerRef.current?.seekTo?.(0, true)
+          ytPlayerRef.current?.playVideo?.()
+        } catch {}
+      } else {
+        isPlayingRef.current = false
+        setIsPlayingState(false)
+        stopTick()
+        handleNextRef.current?.()
+      }
     }
   }, [])
 
@@ -108,6 +199,11 @@ export function MusicPlayerProvider({ children }) {
 
   const togglePlay = useCallback(() => setIsPlaying(p => !p), [setIsPlaying])
   const toggleVideo = useCallback(() => setVideoVisible(v => !v), [])
+  const setRepeat = useCallback((vOrFn) => {
+    const next = typeof vOrFn === "function" ? vOrFn(repeatRef.current) : vOrFn
+    repeatRef.current = next
+    setRepeatState(next)
+  }, [])
 
   // ── Next / Prev ───────────────────────────────────────────────
   // Uses functional setQueue/setQueueIndex to always read latest state —
@@ -167,15 +263,45 @@ export function MusicPlayerProvider({ children }) {
     } catch {}
   }, [])
 
-  const toggleLike = useCallback((song) => {
-    if (!song || !song.title) return
-    const key = `${song.title}::${song.artist}`
-    setLiked(prev => {
-      const next = { ...prev }
-      if (next[key]) delete next[key]
-      else next[key] = song
-      return next
-    })
+  const [popupState, setPopupState] = useState({ isOpen: false, song: null })
+
+  const openPlaylistPopup = useCallback((song) => {
+    setPopupState({ isOpen: true, song })
+  }, [])
+
+  const closePlaylistPopup = useCallback(() => {
+    setPopupState({ isOpen: false, song: null })
+  }, [])
+
+  const updateSongPlaylists = useCallback((song, playlistIds) => {
+    setPlaylists(prev => prev.map(pl => {
+      const hasSong = pl.songs.some(s => s.title === song.title)
+      const shouldHaveSong = playlistIds.includes(pl.id)
+      
+      if (shouldHaveSong && !hasSong) {
+        return { ...pl, songs: [...pl.songs, song], count: pl.songs.length + 1 }
+      } else if (!shouldHaveSong && hasSong) {
+        return { ...pl, songs: pl.songs.filter(s => s.title !== song.title), count: pl.songs.length - 1 }
+      }
+      return pl
+    }))
+  }, [])
+
+  const createPlaylist = useCallback((name, song = null) => {
+    const id = name.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now()
+    const newPlaylist = {
+      id,
+      title: name,
+      subtitle: "Custom Playlist",
+      description: "A new playlist created by you.",
+      count: song ? 1 : 0,
+      color: "#e0e0e0",
+      glow: "rgba(224,224,224,0.12)",
+      private: true,
+      songs: song ? [song] : [],
+    }
+    setPlaylists(prev => [...prev, newPlaylist])
+    return id
   }, [])
 
   const formatTime = (s) => {
@@ -189,16 +315,24 @@ export function MusicPlayerProvider({ children }) {
   return (
     <MusicPlayerContext.Provider value={{
       currentSong, isPlaying, progress, elapsed,
-      liked, queue, songData, totalDuration,
+      playlists, queue, songData, totalDuration,
       volume, videoVisible,
       formatTime,
       ytPlayerRef,
       playSong, togglePlay, handleNext, handlePrev,
-      seek, toggleLike, setIsPlaying, setVolume,
-      toggleVideo, setVideoVisible,
+      seek, openPlaylistPopup, setIsPlaying, setVolume,
+      toggleVideo, setVideoVisible, repeat, setRepeat,
       onYTStateChange,
     }}>
       {children}
+      <PlaylistSelectionPopup
+        isOpen={popupState.isOpen}
+        onClose={closePlaylistPopup}
+        song={popupState.song}
+        playlists={playlists}
+        onUpdatePlaylists={updateSongPlaylists}
+        onCreatePlaylist={createPlaylist}
+      />
     </MusicPlayerContext.Provider>
   )
 }

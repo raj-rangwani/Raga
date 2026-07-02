@@ -43,6 +43,7 @@ async function searchYouTube(query) {
     url.searchParams.set("type",            "video")
     url.searchParams.set("maxResults",      "5")
     url.searchParams.set("videoCategoryId", "10")
+    url.searchParams.set("videoEmbeddable", "true")
     const res  = await fetch(url.toString())
     if (!res.ok) return []
     const data = await res.json()

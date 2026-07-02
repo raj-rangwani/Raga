@@ -12,7 +12,7 @@ const YT_API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY
 
 async function fetchVideoId(title, artist) {
   const q = encodeURIComponent(`${title} ${artist} ghazal`)
-  const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=1&q=${q}&key=${YT_API_KEY}`
+  const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=1&videoEmbeddable=true&q=${q}&key=${YT_API_KEY}`
   const res = await fetch(url)
   if (!res.ok) throw new Error("YouTube search failed")
   const data = await res.json()
@@ -20,75 +20,7 @@ async function fetchVideoId(title, artist) {
 }
 
 // ─── Data ─────────────────────────────────────────────────────
-const PLAYLISTS = [
-  {
-    id: "liked",
-    title: "Liked Songs",
-    subtitle: "Personal Collection",
-    description: "The songs that stayed long after the night ended. Each one a chapter.",
-    count: 42,
-    color: "#c4a882",
-    glow: "rgba(196,168,130,0.12)",
-    private: true,
-    songs: [
-      { title: "Hoshwalon Ko Khabar Kya", artist: "Jagjit Singh",  duration: "5:12", year: "1988", plays: "2.4M" },
-      { title: "Tum Itna Jo Muskura Rahe Ho", artist: "Jagjit Singh", duration: "4:26", year: "1981", plays: "3.1M" },
-      { title: "Aaj Jaane Ki Zid Na Karo",  artist: "Farida Khanum", duration: "4:48", year: "1977", plays: "5.8M" },
-      { title: "Tum Nahin Aaye",            artist: "Mehdi Hassan",  duration: "5:33", year: "1972", plays: "1.9M" },
-      { title: "Ranjish Hi Sahi",           artist: "Mehdi Hassan",  duration: "6:20", year: "1974", plays: "4.1M" },
-    ],
-  },
-  {
-    id: "midnight-rain",
-    title: "Midnight Rain",
-    subtitle: "Quiet Nights",
-    description: "Soft ghazals for rain, silence and late thoughts. Best heard alone.",
-    count: 18,
-    color: "#8ba9c4",
-    glow: "rgba(139,169,196,0.12)",
-    private: false,
-    songs: [
-      { title: "Jhuki Jhuki Si Nazar",       artist: "Jagjit Singh",        duration: "5:01", year: "1990", plays: "1.8M" },
-      { title: "Chitthi Na Koi Sandesh",     artist: "Jagjit Singh",        duration: "6:40", year: "1999", plays: "4.2M" },
-      { title: "Lag Jaa Gale",               artist: "Lata Mangeshkar",     duration: "3:55", year: "1964", plays: "9.1M" },
-      { title: "Yeh Jo Halka Halka Suroor Hai", artist: "Nusrat Fateh Ali Khan", duration: "7:12", year: "1986", plays: "3.3M" },
-      { title: "Dil Dhoondta Hai",           artist: "Bhupinder Singh",     duration: "5:44", year: "1975", plays: "2.2M" },
-    ],
-  },
-  {
-    id: "mehfil-nights",
-    title: "Mehfil Nights",
-    subtitle: "Classic Mehfils",
-    description: "Timeless voices gathered for long poetic evenings. No clock, no hurry.",
-    count: 26,
-    color: "#b89a6a",
-    glow: "rgba(184,154,106,0.12)",
-    private: false,
-    songs: [
-      { title: "Koi Fariyaad",              artist: "Jagjit Singh",          duration: "8:09", year: "2003", plays: "5.7M" },
-      { title: "Dam Mast Qalandar",         artist: "Nusrat Fateh Ali Khan", duration: "9:30", year: "1987", plays: "12.4M" },
-      { title: "Yeh Dil Yeh Pagal Dil Mera", artist: "Mehdi Hassan",        duration: "5:55", year: "1969", plays: "2.9M" },
-      { title: "Allah Hoo",                 artist: "Nusrat Fateh Ali Khan", duration: "8:44", year: "1990", plays: "8.7M" },
-      { title: "Abhi Na Jao Chhod Kar",    artist: "Asha Bhosle",           duration: "3:40", year: "1960", plays: "7.2M" },
-    ],
-  },
-  {
-    id: "sufi-silence",
-    title: "Sufi Silence",
-    subtitle: "Spiritual Calm",
-    description: "Poetry that feels like prayer and stillness that fills an empty room.",
-    count: 14,
-    color: "#82b89a",
-    glow: "rgba(130,184,154,0.12)",
-    private: false,
-    songs: [
-      { title: "Mere Rashke Qamar",  artist: "Nusrat Fateh Ali Khan", duration: "6:15", year: "1986", plays: "6.8M" },
-      { title: "O Re Piya",         artist: "Rahat Fateh Ali Khan",   duration: "5:28", year: "2007", plays: "4.5M" },
-      { title: "Mast Qalandar",     artist: "Abida Parveen",          duration: "11:20", year: "1988", plays: "3.1M" },
-      { title: "Tu Jhoom",          artist: "Abida Parveen",          duration: "5:02", year: "2022", plays: "2.7M" },
-    ],
-  },
-]
+// The playlists are now managed globally in MusicPlayerContext
 
 // ─── Song row ─────────────────────────────────────────────────
 function SongRow({ song, index, color, onPlay, isCurrentSong, isPlaying, isLoading, isLiked, onLike }) {
@@ -159,17 +91,18 @@ function SongRow({ song, index, color, onPlay, isCurrentSong, isPlaying, isLoadi
 
 // ─── Main ─────────────────────────────────────────────────────
 export default function Playlist() {
-  const { playSong, currentSong, isPlaying, liked, toggleLike } = useMusicPlayer()
+  const { playSong, currentSong, isPlaying, playlists, openPlaylistPopup } = useMusicPlayer()
   const [activeId,     setActiveId]     = useState("liked")
   // videoIdCache: "Title::Artist" → videoId string | "error"
   const [videoIdCache, setVideoIdCache] = useState({})
   // Which song is currently being fetched (cacheKey string | null)
   const [loadingSong,  setLoadingSong]  = useState(null)
 
-  const baseActive = PLAYLISTS.find(p => p.id === activeId) || PLAYLISTS[0]
-  const active = activeId === "liked" 
-    ? { ...baseActive, songs: Object.values(liked), count: Object.keys(liked).length }
-    : baseActive
+  const computedPlaylists = playlists.map(pl => {
+    return { ...pl, count: pl.songs.length }
+  })
+
+  const active = computedPlaylists.find(p => p.id === activeId) || computedPlaylists[0]
 
   // ── Fetch a single videoId and update cache ───────────────────
   const getVideoId = useCallback(async (song) => {
@@ -252,6 +185,12 @@ export default function Playlist() {
     if (active.songs[0]) handlePlaySong(active.songs[0], active.songs)
   }
 
+  const handleShufflePlay = () => {
+    if (!active.songs.length) return
+    const shuffled = [...active.songs].sort(() => Math.random() - 0.5)
+    handlePlaySong(shuffled[0], shuffled)
+  }
+
   return (
     <div className="min-h-screen text-white pb-32 relative overflow-hidden" style={{ background: "#080605" }}>
 
@@ -282,7 +221,7 @@ export default function Playlist() {
 
         {/* ── Left sidebar ── */}
         <div className="flex flex-col gap-2 pr-8 border-r border-white/5">
-          {PLAYLISTS.map(pl => (
+          {computedPlaylists.map(pl => (
             <button
               key={pl.id}
               onClick={() => setActiveId(pl.id)}
@@ -354,7 +293,9 @@ export default function Playlist() {
                   {loadingSong ? "Loading…" : "Play All"}
                 </button>
                 <button
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm transition-all duration-300 hover:bg-white/5"
+                  onClick={handleShufflePlay}
+                  disabled={active.songs.length === 0}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm transition-all duration-300 hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{ border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)", fontFamily: "Inter" }}
                 >
                   <Shuffle size={14} />
@@ -397,8 +338,8 @@ export default function Playlist() {
                     isCurrentSong={isCurrentSong}
                     isPlaying={isPlaying}
                     isLoading={loadingSong === cacheKey}
-                    isLiked={!!liked[cacheKey]}
-                    onLike={toggleLike}
+                    isLiked={playlists.some(pl => pl.songs.some(s => s.title === song.title))}
+                    onLike={openPlaylistPopup}
                   />
                 )
               })}

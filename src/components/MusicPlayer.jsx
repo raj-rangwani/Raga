@@ -119,11 +119,12 @@ function LyricsPanel({ lyrics, elapsed }) {
 // ── Main ─────────────────────────────────────────────────────
 export default function MusicPlayer() {
   const {
-    currentSong, isPlaying, progress, elapsed, liked,
+    currentSong, isPlaying, progress, elapsed, playlists,
     songData, totalDuration, formatTime,
-    handleNext, handlePrev, seek, toggleLike, setIsPlaying,
+    handleNext, handlePrev, seek, openPlaylistPopup, setIsPlaying,
     volume, setVolume,          // ← from context, controls actual YT player
     videoVisible, toggleVideo,  // ← from context
+    repeat, setRepeat,          // ← from context, controls repeat logic
   } = useMusicPlayer()
 
   const [expanded,   setExpanded]   = useState(false)
@@ -131,14 +132,13 @@ export default function MusicPlayer() {
   const [muted,      setMuted]      = useState(false)
   const [prevVol,    setPrevVol]    = useState(80)  // remember vol before mute
   const [shuffle,    setShuffle]    = useState(false)
-  const [repeat,     setRepeat]     = useState(false)
   const [activeView, setActiveView] = useState("cover")
   const progressBarRef = useRef(null)
   const touchStartY    = useRef(null)
 
   useEffect(() => { if (currentSong) setDismissed(false) }, [currentSong])
 
-  const isLiked  = !!liked[`${currentSong?.title}::${currentSong?.artist}`]
+  const isLiked  = playlists?.some(pl => pl.songs.some(s => s.title === currentSong?.title))
   const lyrics   = songData?.lyrics || null
   const hasVideo = !!currentSong?.videoId
 
@@ -317,7 +317,7 @@ export default function MusicPlayer() {
                 </>
               )}
             </div>
-            <button onClick={() => toggleLike(currentSong)} className="ml-4 flex-shrink-0">
+            <button onClick={() => openPlaylistPopup(currentSong)} className="ml-4 flex-shrink-0">
               <Heart size={22} style={{ color: isLiked ? "#e05454" : "rgba(255,255,255,0.25)", fill: isLiked ? "#e05454" : "none", transition: "all 0.25s" }} />
             </button>
           </div>
@@ -445,7 +445,7 @@ export default function MusicPlayer() {
 
           {/* Mini controls */}
           <div className="flex items-center gap-2 flex-shrink-0" onClick={e => e.stopPropagation()}>
-            <button onClick={() => toggleLike(currentSong)}>
+            <button onClick={() => openPlaylistPopup(currentSong)}>
               <Heart size={16} style={{ color: isLiked ? "#e05454" : "rgba(255,255,255,0.2)", fill: isLiked ? "#e05454" : "none", transition: "all 0.2s" }} />
             </button>
 
@@ -483,7 +483,7 @@ export default function MusicPlayer() {
             </button>
 
             <button
-              onClick={(e) => { e.stopPropagation(); setDismissed(true) }}
+              onClick={(e) => { e.stopPropagation(); setDismissed(true); setIsPlaying(false); }}
               className="w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200 ml-1"
               style={{ color: "rgba(255,255,255,0.2)" }}
             >

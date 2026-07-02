@@ -49,6 +49,7 @@ export async function searchSong(songTitle, artistName) {
     maxResults: 5,
     // Prefer official / topic channels for better quality
     videoCategoryId: "10", // Music category
+    videoEmbeddable: "true",
   })
 
   if (!searchData.items?.length) return null
